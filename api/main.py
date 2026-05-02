@@ -239,3 +239,40 @@ async def health():
         "anthropic_key": "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING",
         "database_url":  "set" if os.getenv("DATABASE_URL") else "MISSING",
     }
+
+
+@app.get("/test")
+async def test_conectividad():
+    import httpx
+    resultados: dict = {}
+
+    # 1. Test raw TCP/TLS to api.anthropic.com
+    try:
+        r = httpx.get("https://api.anthropic.com", timeout=10)
+        resultados["tcp_anthropic"] = {"status": "ok", "http_code": r.status_code}
+    except Exception as e:
+        resultados["tcp_anthropic"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
+
+    # 2. Test Anthropic SDK
+    try:
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        r2 = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=5,
+            messages=[{"role": "user", "content": "ok"}]
+        )
+        resultados["anthropic_sdk"] = {"status": "ok", "respuesta": r2.content[0].text}
+    except Exception as e:
+        resultados["anthropic_sdk"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
+
+    # 3. Test PostgreSQL
+    try:
+        from sqlalchemy import create_engine, text as sql_text
+        engine = create_engine(os.getenv("DATABASE_URL", ""))
+        with engine.connect() as conn:
+            n = conn.execute(sql_text("SELECT COUNT(*) FROM productos")).scalar()
+        resultados["database"] = {"status": "ok", "productos": n}
+    except Exception as e:
+        resultados["database"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
+
+    return resultados
