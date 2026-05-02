@@ -3,7 +3,6 @@ import sys
 import os
 import json
 import uuid
-import queue
 import threading
 import asyncio
 from pathlib import Path
@@ -38,10 +37,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory job storage (resets on restart — OK for MVP)
+# In-memory job storage — each job stores a list of events (survives reconnects)
 jobs: dict = {}
 
-# Semaphore: one pipeline at a time per instance
+# One pipeline at a time per instance
 _pipeline_lock = threading.Semaphore(1)
 
 
@@ -73,15 +72,14 @@ def detectar_mercado(producto: str) -> str:
         raise RuntimeError(f"Anthropic API error ({type(e).__name__}): {e}")
 
 
-def ejecutar_pipeline(
-    job_id: str,
-    producto: str,
-    precio_compra: float,
-    unidades: int,
-    q: queue.Queue,
-):
+def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades: int):
+    """Runs all 9 agents. Appends events to jobs[job_id]['events'] — no queue needed."""
+
+    def emit(event: dict):
+        jobs[job_id]["events"].append(event)
+
     def prog(step: int, agente: str, mensaje: str, status: str = "running"):
-        q.put({
+        emit({
             "type": "progress",
             "step": step,
             "total": 9,
@@ -92,11 +90,11 @@ def ejecutar_pipeline(
 
     acquired = _pipeline_lock.acquire(timeout=5)
     if not acquired:
-        q.put({"type": "error", "message": "Servidor ocupado. Intenta en 30 segundos."})
+        emit({"type": "error", "message": "Servidor ocupado. Intenta en 30 segundos."})
+        jobs[job_id]["status"] = "error"
         return
 
     try:
-        # Step 0 — detect market
         prog(0, "Detector de nicho", "Identificando nicho de mercado...", "running")
         mercado = detectar_mercado(producto)
         prog(0, "Detector de nicho", f"Nicho: {mercado}", "done")
@@ -104,15 +102,15 @@ def ejecutar_pipeline(
         limpiar_memoria()
 
         pasos = [
-            (1, "Ingesta de datos",            lambda: ingesta.ejecutar(mercado)),
-            (2, "Analisis de competencia",     lambda: competencia.ejecutar(mercado)),
-            (3, "Analisis de resenas",         lambda: resenas.ejecutar(mercado)),
-            (4, "GAP Analysis",                lambda: gap_analysis.ejecutar(mercado)),
-            (5, "Precio vs Valor",             lambda: precio_valor.ejecutar(mercado)),
-            (6, "Keywords y SEO",              lambda: keywords.ejecutar(mercado)),
-            (7, "Concepto de diferenciacion",  lambda: concepto.ejecutar(mercado)),
-            (8, "Listado optimizado",          lambda: listado_optimizado.ejecutar(mercado)),
-            (9, "Validacion de arbitraje",     lambda: ejecutar_validador(producto, precio_compra, unidades, mercado)),
+            (1, "Ingesta de datos",           lambda: ingesta.ejecutar(mercado)),
+            (2, "Analisis de competencia",    lambda: competencia.ejecutar(mercado)),
+            (3, "Analisis de resenas",        lambda: resenas.ejecutar(mercado)),
+            (4, "GAP Analysis",               lambda: gap_analysis.ejecutar(mercado)),
+            (5, "Precio vs Valor",            lambda: precio_valor.ejecutar(mercado)),
+            (6, "Keywords y SEO",             lambda: keywords.ejecutar(mercado)),
+            (7, "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
+            (8, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
+            (9, "Validacion de arbitraje",    lambda: ejecutar_validador(producto, precio_compra, unidades, mercado)),
         ]
 
         resultados = {}
@@ -125,13 +123,11 @@ def ejecutar_pipeline(
                 prog(step, nombre, f"Error: {str(e)[:60]}", "error")
                 resultados[nombre] = None
 
-        # Build final result from memory
-        mem = leer_memoria()
+        mem            = leer_memoria()
         validador_mem  = mem.get("validador",          {}).get("hallazgos", {})
         listado_mem    = mem.get("listado_optimizado", {}).get("hallazgos", {})
         concepto_mem   = mem.get("concepto",           {}).get("hallazgos", {})
         keywords_mem   = mem.get("keywords",           {}).get("hallazgos", {})
-
         validador_full = resultados.get("Validacion de arbitraje") or {}
 
         final = {
@@ -153,11 +149,11 @@ def ejecutar_pipeline(
             "riesgos":                     validador_full.get("riesgos", []),
             "acciones_inmediatas":         validador_full.get("acciones_inmediatas", []),
             "listing": {
-                "titulo":              listado_mem.get("titulo", ""),
-                "precio_lanzamiento":  listado_mem.get("precio_lanzamiento_mx", 0),
-                "precio_objetivo":     listado_mem.get("precio_objetivo_mx", 0),
-                "terminos_backend":    listado_mem.get("terminos_backend", []),
-                "top_bullets":         listado_mem.get("top_3_bullets", []),
+                "titulo":             listado_mem.get("titulo", ""),
+                "precio_lanzamiento": listado_mem.get("precio_lanzamiento_mx", 0),
+                "precio_objetivo":    listado_mem.get("precio_objetivo_mx", 0),
+                "terminos_backend":   listado_mem.get("terminos_backend", []),
+                "top_bullets":        listado_mem.get("top_3_bullets", []),
             },
             "concepto": {
                 "nombre":          concepto_mem.get("nombre_concepto", ""),
@@ -169,11 +165,11 @@ def ejecutar_pipeline(
 
         jobs[job_id]["result"] = final
         jobs[job_id]["status"] = "done"
-        q.put({"type": "done", "result": final})
+        emit({"type": "done", "result": final})
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
-        q.put({"type": "error", "message": str(e)})
+        emit({"type": "error", "message": str(e)})
     finally:
         _pipeline_lock.release()
 
@@ -186,12 +182,11 @@ async def iniciar_validacion(request: ValidarRequest):
         raise HTTPException(400, "El precio de compra debe ser mayor a 0")
 
     job_id = str(uuid.uuid4())
-    q: queue.Queue = queue.Queue()
-    jobs[job_id] = {"queue": q, "result": None, "status": "pending"}
+    jobs[job_id] = {"events": [], "result": None, "status": "pending"}
 
     threading.Thread(
         target=ejecutar_pipeline,
-        args=(job_id, request.producto.strip(), request.precio_compra, request.unidades, q),
+        args=(job_id, request.producto.strip(), request.precio_compra, request.unidades),
         daemon=True,
     ).start()
 
@@ -200,21 +195,43 @@ async def iniciar_validacion(request: ValidarRequest):
 
 @app.get("/stream/{job_id}")
 async def stream_progreso(job_id: str):
+    """
+    SSE endpoint. Polls the events list — never blocks the event loop.
+    Reconnecting clients replay all past events automatically.
+    """
     if job_id not in jobs:
         raise HTTPException(404, "Job no encontrado")
 
-    q = jobs[job_id]["queue"]
-
     async def generate():
-        while True:
-            try:
-                msg = q.get(timeout=0.3)
-                yield f"data: {json.dumps(msg, ensure_ascii=False)}\n\n"
-                if msg.get("type") in ("done", "error"):
-                    break
-            except queue.Empty:
-                yield ": heartbeat\n\n"
-                await asyncio.sleep(0.2)
+        # Tell browser: retry after 5 s on any disconnect
+        yield "retry: 5000\n\n"
+        idx = 0
+        max_seconds = 720   # 12 min hard limit
+        elapsed = 0.0
+        interval = 0.4      # poll every 400 ms
+        last_ping = 0.0
+        PING_EVERY = 8.0    # real data event every 8 s — resets Railway proxy idle timer
+
+        while elapsed < max_seconds:
+            events = jobs[job_id]["events"]
+
+            if idx < len(events):
+                for event in events[idx:]:
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    if event.get("type") in ("done", "error"):
+                        return
+                idx = len(events)
+                last_ping = elapsed
+            else:
+                if elapsed - last_ping >= PING_EVERY:
+                    # Real data event (not a comment) so Railway proxy resets its idle timer
+                    yield f"data: {json.dumps({'type': 'ping'}, ensure_ascii=False)}\n\n"
+                    last_ping = elapsed
+                else:
+                    yield ": keep-alive\n\n"
+
+            await asyncio.sleep(interval)
+            elapsed += interval
 
     return StreamingResponse(
         generate(),
@@ -235,7 +252,7 @@ async def obtener_resultado(job_id: str):
 async def health():
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "anthropic_key": "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING",
         "database_url":  "set" if os.getenv("DATABASE_URL") else "MISSING",
     }
@@ -244,51 +261,27 @@ async def health():
 @app.get("/test")
 async def test_conectividad():
     import httpx
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     resultados: dict = {}
 
-    # 1. Proxy / base URL env vars que pueden interferir
-    resultados["env"] = {
-        "ANTHROPIC_BASE_URL": os.getenv("ANTHROPIC_BASE_URL", "no_set"),
-        "HTTPS_PROXY":        os.getenv("HTTPS_PROXY", "no_set"),
-        "HTTP_PROXY":         os.getenv("HTTP_PROXY", "no_set"),
-        "NO_PROXY":           os.getenv("NO_PROXY", "no_set"),
-    }
-
-    # 2. Raw httpx POST directo a la API (sin SDK)
     try:
-        r = httpx.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 5,
-                "messages": [{"role": "user", "content": "ok"}],
-            },
-            timeout=15,
-        )
-        resultados["raw_httpx_post"] = {"status": "ok", "http_code": r.status_code, "body": r.text[:120]}
+        r = httpx.get("https://api.anthropic.com", timeout=10)
+        resultados["tcp_anthropic"] = {"status": "ok", "http_code": r.status_code}
     except Exception as e:
-        resultados["raw_httpx_post"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
+        resultados["tcp_anthropic"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
 
-    # 3. SDK con cliente httpx explícito (sin pool, sin proxies)
     try:
         custom = httpx.Client(timeout=20.0, trust_env=False)
-        client2 = Anthropic(api_key=api_key, http_client=custom)
-        r2 = client2.messages.create(
+        client = Anthropic(api_key=api_key, http_client=custom)
+        r2 = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=5,
             messages=[{"role": "user", "content": "ok"}],
         )
-        resultados["sdk_custom_client"] = {"status": "ok", "respuesta": r2.content[0].text}
+        resultados["anthropic_sdk"] = {"status": "ok", "respuesta": r2.content[0].text}
     except Exception as e:
-        resultados["sdk_custom_client"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
+        resultados["anthropic_sdk"] = {"status": "error", "tipo": type(e).__name__, "msg": str(e)[:200]}
 
-    # 4. PostgreSQL
     try:
         from sqlalchemy import create_engine, text as sql_text
         engine = create_engine(os.getenv("DATABASE_URL", ""))

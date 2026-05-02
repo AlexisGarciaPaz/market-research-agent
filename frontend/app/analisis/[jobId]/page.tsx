@@ -11,7 +11,7 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 interface ProgressEvent {
-  type: "progress" | "done" | "error"
+  type: "progress" | "done" | "error" | "ping"
   step?: number
   total?: number
   agent?: string
@@ -108,7 +108,64 @@ export default function AnalisisPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError]   = useState("")
   const [done, setDone]     = useState(false)
-  const esRef = useRef<EventSource | null>(null)
+  const esRef   = useRef<EventSource | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const applyEvent = (msg: ProgressEvent) => {
+    if (msg.type === "ping") return
+
+    if (msg.type === "progress") {
+      setSteps((prev: Step[]) => {
+        const idx = prev.findIndex((s: Step) => s.step === msg.step)
+        const newStep: Step = {
+          step:    msg.step!,
+          agent:   STEP_LABELS[msg.step!] || msg.agent || "",
+          message: msg.message || "",
+          status:  (msg.status as Step["status"]) || "running",
+        }
+        if (idx === -1) return [...prev, newStep]
+        const next = [...prev]
+        next[idx] = newStep
+        return next
+      })
+    }
+
+    if (msg.type === "done") {
+      setResult(msg.result!)
+      setDone(true)
+      esRef.current?.close()
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+
+    if (msg.type === "error") {
+      setError(msg.message || "Error desconocido")
+      setDone(true)
+      esRef.current?.close()
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }
+
+  // Polling fallback: kick in when SSE is permanently closed by proxy/timeout
+  const startPolling = () => {
+    if (pollRef.current) return
+    pollRef.current = setInterval(async () => {
+      try {
+        const res  = await fetch(`${API_URL}/resultado/${jobId}`)
+        const data = await res.json()
+        if (data.status === "done" && data.result) {
+          clearInterval(pollRef.current!)
+          pollRef.current = null
+          setResult(data.result)
+          setDone(true)
+        } else if (data.status === "error") {
+          clearInterval(pollRef.current!)
+          pollRef.current = null
+          setError("Error en el análisis — revisa el producto e intenta de nuevo")
+          setDone(true)
+        }
+      } catch { /* ignore transient network errors */ }
+    }, 5000)
+  }
 
   useEffect(() => {
     const es = new EventSource(`${API_URL}/stream/${jobId}`)
@@ -116,49 +173,22 @@ export default function AnalisisPage() {
 
     es.onmessage = (e) => {
       if (!e.data || e.data.startsWith(":")) return
-
-      const msg: ProgressEvent = JSON.parse(e.data)
-
-      if (msg.type === "progress") {
-        setSteps((prev) => {
-          const idx = prev.findIndex((s) => s.step === msg.step)
-          const newStep: Step = {
-            step:    msg.step!,
-            agent:   STEP_LABELS[msg.step!] || msg.agent || "",
-            message: msg.message || "",
-            status:  (msg.status as Step["status"]) || "running",
-          }
-          if (idx === -1) return [...prev, newStep]
-          const next = [...prev]
-          next[idx] = newStep
-          return next
-        })
-      }
-
-      if (msg.type === "done") {
-        setResult(msg.result!)
-        setDone(true)
-        es.close()
-      }
-
-      if (msg.type === "error") {
-        setError(msg.message || "Error desconocido")
-        setDone(true)
-        es.close()
-      }
+      applyEvent(JSON.parse(e.data))
     }
 
     es.onerror = () => {
-      // CONNECTING means EventSource is auto-reconnecting — do nothing.
-      // Backend replays all events from the start, so the client catches up.
-      // Only fail permanently if the browser has fully closed the connection.
       if (es.readyState === EventSource.CLOSED) {
-        setError("Se perdió la conexión con el servidor")
-        setDone(true)
+        // SSE is permanently closed — fall back to polling for the final result
+        startPolling()
       }
+      // readyState === CONNECTING means the browser is auto-reconnecting;
+      // backend replays all events from the start when it reconnects.
     }
 
-    return () => es.close()
+    return () => {
+      es.close()
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
   }, [jobId])
 
   const progress = done ? 100 : steps.length > 0
