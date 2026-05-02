@@ -114,7 +114,7 @@ Genera exactamente 6-8 atributos diferenciadores con justificación en datos."""
     print("  Claude generando concepto de diferenciación...")
     respuesta = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4000,
+        max_tokens=2500,
         system="Eres experto en product strategy Amazon México. Respondes siempre con JSON válido.",
         messages=[{"role": "user", "content": prompt}]
     )

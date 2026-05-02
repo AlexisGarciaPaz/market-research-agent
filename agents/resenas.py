@@ -190,8 +190,8 @@ Responde ÚNICAMENTE con JSON válido, sin backticks:
 
     print("  Claude analizando reseñas...")
     respuesta = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2500,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1500,
         system="Eres analista de mercado Amazon México. Respondes siempre con JSON válido.",
         messages=[{"role": "user", "content": prompt}]
     )

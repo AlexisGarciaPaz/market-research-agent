@@ -206,8 +206,8 @@ Genera exactamente 5 bullets."""
 
     print("  Claude analizando estrategia de keywords...")
     respuesta = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2500,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1500,
         system="Eres experto en SEO Amazon México. Respondes siempre con JSON válido.",
         messages=[{"role": "user", "content": prompt}]
     )
