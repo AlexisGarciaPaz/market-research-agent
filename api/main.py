@@ -52,18 +52,25 @@ class ValidarRequest(BaseModel):
 
 
 def detectar_mercado(producto: str) -> str:
-    client = Anthropic()
-    respuesta = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=50,
-        system=(
-            "Responde SOLO con el nombre del nicho de mercado en 1-3 palabras en espanol. "
-            "Ejemplos: suplementos, electrodomesticos, ropa deportiva, miel y mermeladas, "
-            "snacks saludables, productos de limpieza. Sin puntuacion ni explicacion."
-        ),
-        messages=[{"role": "user", "content": f"Nicho de Amazon para: {producto}"}]
-    )
-    return respuesta.content[0].text.strip()
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY no esta configurada en el servidor")
+
+    client = Anthropic(api_key=api_key)
+    try:
+        respuesta = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=50,
+            system=(
+                "Responde SOLO con el nombre del nicho de mercado en 1-3 palabras en espanol. "
+                "Ejemplos: suplementos, electrodomesticos, ropa deportiva, miel y mermeladas, "
+                "snacks saludables, productos de limpieza. Sin puntuacion ni explicacion."
+            ),
+            messages=[{"role": "user", "content": f"Nicho de Amazon para: {producto}"}]
+        )
+        return respuesta.content[0].text.strip()
+    except Exception as e:
+        raise RuntimeError(f"Anthropic API error ({type(e).__name__}): {e}")
 
 
 def ejecutar_pipeline(
@@ -226,4 +233,9 @@ async def obtener_resultado(job_id: str):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "anthropic_key": "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING",
+        "database_url":  "set" if os.getenv("DATABASE_URL") else "MISSING",
+    }
