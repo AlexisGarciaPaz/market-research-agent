@@ -48,6 +48,9 @@ class ValidarRequest(BaseModel):
     producto: str
     precio_compra: float
     unidades: int = 1
+    url_amazon: str = ""
+    precio_amazon: float = 0
+    ventas_mes: int = 0
 
 
 def detectar_mercado(producto: str) -> str:
@@ -72,7 +75,8 @@ def detectar_mercado(producto: str) -> str:
         raise RuntimeError(f"Anthropic API error ({type(e).__name__}): {e}")
 
 
-def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades: int):
+def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades: int,
+                      url_amazon: str = "", precio_amazon: float = 0, ventas_mes: int = 0):
     """Runs all 9 agents. Appends events to jobs[job_id]['events'] — no queue needed."""
 
     def emit(event: dict):
@@ -110,7 +114,8 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
             (6, "Keywords y SEO",             lambda: keywords.ejecutar(mercado)),
             (7, "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
             (8, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
-            (9, "Validacion de arbitraje",    lambda: ejecutar_validador(producto, precio_compra, unidades, mercado)),
+            (9, "Validacion de arbitraje",    lambda: ejecutar_validador(producto, precio_compra, unidades, mercado,
+                                                                           url_amazon=url_amazon, precio_amazon=precio_amazon, ventas_mes=ventas_mes)),
         ]
 
         resultados = {}
@@ -135,6 +140,10 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
             "producto":          producto,
             "precio_compra_mx":  precio_compra,
             "unidades":          unidades,
+            "url_amazon":        url_amazon,
+            "precio_amazon_mx":  precio_amazon,
+            "ventas_mes":        ventas_mes,
+            "asin":              validador_full.get("asin", ""),
             "veredicto":         validador_mem.get("veredicto", ""),
             "score_oportunidad": validador_mem.get("score_oportunidad", 0),
             "roi_estimado_pct":  validador_mem.get("roi_estimado_pct", 0),
@@ -187,6 +196,11 @@ async def iniciar_validacion(request: ValidarRequest):
     threading.Thread(
         target=ejecutar_pipeline,
         args=(job_id, request.producto.strip(), request.precio_compra, request.unidades),
+        kwargs={
+            "url_amazon":   request.url_amazon.strip(),
+            "precio_amazon": request.precio_amazon,
+            "ventas_mes":   request.ventas_mes,
+        },
         daemon=True,
     ).start()
 
