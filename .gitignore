@@ -1,0 +1,16 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+data/processed/
+outputs/
+reports/
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db

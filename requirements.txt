@@ -1,0 +1,13 @@
+anthropic
+pandas
+openpyxl
+fastapi
+uvicorn
+python-dotenv
+scikit-learn
+nltk
+matplotlib
+seaborn
+rich
+psycopg2-binary
+sqlalchemy

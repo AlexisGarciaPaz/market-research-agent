@@ -1,0 +1,101 @@
+id_resena,marca,rating,titulo,cuerpo,fecha,verificado,util_votos,tipo
+R1000,AudioPro,4,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-04-05,No,26,positiva
+R1001,PureAudio,4,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-01-01,Si,55,positiva
+R1002,EchoWave,3,El audio se corta constantemente después,El audio se corta constantemente después de 2 semanas de uso,2024-04-23,No,139,negativa
+R1003,ZenSound,2,No es compatible con asistentes de voz c,No es compatible con asistentes de voz como Alexa o Google,2024-01-25,Si,108,negativa
+R1004,HyperBass,1,Las almohadillas se deterioran muy rápid,"Las almohadillas se deterioran muy rápido, en 3 meses ya se pelan",2024-02-03,Si,24,negativa
+R1005,ZenSound,2,El embalaje llegó dañado y los auricular,El embalaje llegó dañado y los auriculares tenían golpes,2024-01-24,Si,137,negativa
+R1006,EchoWave,2,"La batería no dura lo que dicen, máximo ","La batería no dura lo que dicen, máximo 20 horas reales",2024-05-27,No,92,negativa
+R1007,AudioPro,4,Excelente calidad de sonido para el prec,Excelente calidad de sonido para el precio que tienen,2024-05-03,Si,25,positiva
+R1008,ClearTone,2,El estuche de transporte es de plástico ,El estuche de transporte es de plástico muy frágil,2024-06-12,Si,68,negativa
+R1009,ClearTone,4,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-09-24,Si,41,positiva
+R1010,AudioPro,2,"Se escucha eco en las llamadas, la otra ","Se escucha eco en las llamadas, la otra persona se queja",2024-11-11,Si,58,negativa
+R1011,ZenSound,5,Llegaron antes de lo esperado y muy bien,Llegaron antes de lo esperado y muy bien empacados,2024-02-07,No,80,positiva
+R1012,NovaBeat,2,No incluye cable auxiliar en la caja,No incluye cable auxiliar en la caja,2024-03-09,Si,63,negativa
+R1013,PureAudio,5,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-10-13,Si,56,positiva
+R1014,NovaBeat,4,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-02-25,Si,28,positiva
+R1015,StellarSound,1,El volumen máximo es muy bajo para ambie,El volumen máximo es muy bajo para ambientes ruidosos,2024-02-13,Si,119,negativa
+R1016,BassKing,3,El audio se corta constantemente después,El audio se corta constantemente después de 2 semanas de uso,2024-11-18,Si,87,negativa
+R1017,NovaBeat,2,No se conecta bien con dispositivos Andr,"No se conecta bien con dispositivos Android, solo funciona con iPhone",2024-01-24,No,67,negativa
+R1018,BassKing,4,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-11-10,No,129,positiva
+R1019,ClearTone,4,"El micrófono es claro, mis compañeros me","El micrófono es claro, mis compañeros me escuchan perfecto en llamadas",2024-09-25,No,0,positiva
+R1020,BassKing,5,Excelente calidad de sonido para el prec,Excelente calidad de sonido para el precio que tienen,2024-06-27,Si,61,positiva
+R1021,BassKing,3,"La batería no dura lo que dicen, máximo ","La batería no dura lo que dicen, máximo 20 horas reales",2024-12-16,Si,136,negativa
+R1022,EchoWave,4,El diseño es elegante y se ven premium p,El diseño es elegante y se ven premium para su precio,2024-03-09,No,108,positiva
+R1023,PureAudio,4,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-11-21,Si,112,positiva
+R1024,AudioPro,5,La batería dura exactamente lo que prome,"La batería dura exactamente lo que prometen, muy satisfecho",2024-04-03,Si,5,positiva
+R1025,AudioPro,4,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-01-03,No,15,positiva
+R1026,BassKing,1,Se calienta mucho en los oídos después d,Se calienta mucho en los oídos después de 1 hora de uso,2024-09-08,Si,124,negativa
+R1027,StellarSound,1,No es compatible con asistentes de voz c,No es compatible con asistentes de voz como Alexa o Google,2024-08-08,Si,104,negativa
+R1028,HyperBass,1,El volumen máximo es muy bajo para ambie,El volumen máximo es muy bajo para ambientes ruidosos,2024-07-14,Si,13,negativa
+R1029,PureAudio,4,Excelente calidad de sonido para el prec,Excelente calidad de sonido para el precio que tienen,2024-12-11,Si,63,positiva
+R1030,ClearTone,3,Se desconecta solo cuando el teléfono es,Se desconecta solo cuando el teléfono está a más de 5 metros,2024-07-06,Si,118,negativa
+R1031,EchoWave,1,Se desconecta solo cuando el teléfono es,Se desconecta solo cuando el teléfono está a más de 5 metros,2024-02-02,No,138,negativa
+R1032,ClearTone,4,La cancelación de ruido funciona muy bie,La cancelación de ruido funciona muy bien en el metro,2024-07-16,Si,54,positiva
+R1033,PureAudio,4,Muy cómodos para usar todo el día sin mo,Muy cómodos para usar todo el día sin molestias en las orejas,2024-01-13,Si,116,positiva
+R1034,NovaBeat,3,"Se escucha eco en las llamadas, la otra ","Se escucha eco en las llamadas, la otra persona se queja",2024-03-07,Si,55,negativa
+R1035,SoundMax,4,"El micrófono es claro, mis compañeros me","El micrófono es claro, mis compañeros me escuchan perfecto en llamadas",2024-01-19,Si,128,positiva
+R1036,EchoWave,4,Excelente calidad de sonido para el prec,Excelente calidad de sonido para el precio que tienen,2024-02-28,Si,17,positiva
+R1037,BassKing,4,Llegaron antes de lo esperado y muy bien,Llegaron antes de lo esperado y muy bien empacados,2024-10-08,No,10,positiva
+R1038,StellarSound,5,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-09-11,Si,52,positiva
+R1039,ZenSound,5,La cancelación de ruido funciona muy bie,La cancelación de ruido funciona muy bien en el metro,2024-07-05,No,76,positiva
+R1040,NovaBeat,1,El audio se corta constantemente después,El audio se corta constantemente después de 2 semanas de uso,2024-10-19,Si,18,negativa
+R1041,ClearTone,3,La carga tarda 3 horas y solo duran 15 h,La carga tarda 3 horas y solo duran 15 horas reales,2024-06-03,Si,94,negativa
+R1042,ZenSound,2,"Se escucha eco en las llamadas, la otra ","Se escucha eco en las llamadas, la otra persona se queja",2024-10-26,No,135,negativa
+R1043,BassKing,3,"El control táctil es muy sensible, cambi","El control táctil es muy sensible, cambia canciones sin querer",2024-03-09,Si,27,negativa
+R1044,ZenSound,4,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-10-07,No,87,positiva
+R1045,EchoWave,3,La carga tarda 3 horas y solo duran 15 h,La carga tarda 3 horas y solo duran 15 horas reales,2024-08-09,Si,23,negativa
+R1046,SoundMax,5,Excelente calidad de sonido para el prec,Excelente calidad de sonido para el precio que tienen,2024-06-25,Si,67,positiva
+R1047,PureAudio,2,"Se escucha eco en las llamadas, la otra ","Se escucha eco en las llamadas, la otra persona se queja",2024-09-01,Si,19,negativa
+R1048,SoundMax,4,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-06-19,No,37,positiva
+R1049,HyperBass,1,"El control táctil es muy sensible, cambi","El control táctil es muy sensible, cambia canciones sin querer",2024-01-12,Si,63,negativa
+R1050,PureAudio,5,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-10-24,Si,60,positiva
+R1051,SoundMax,4,Llegaron antes de lo esperado y muy bien,Llegaron antes de lo esperado y muy bien empacados,2024-03-24,Si,105,positiva
+R1052,ClearTone,4,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-12-04,Si,9,positiva
+R1053,NovaBeat,4,La cancelación de ruido funciona muy bie,La cancelación de ruido funciona muy bien en el metro,2024-06-10,Si,57,positiva
+R1054,HyperBass,1,No incluye cable auxiliar en la caja,No incluye cable auxiliar en la caja,2024-05-28,Si,71,negativa
+R1055,EchoWave,3,No incluye cable auxiliar en la caja,No incluye cable auxiliar en la caja,2024-06-01,Si,66,negativa
+R1056,BassKing,2,La cancelación de ruido no funciona bien,La cancelación de ruido no funciona bien en ambientes muy ruidosos,2024-10-14,Si,80,negativa
+R1057,PureAudio,3,La diadema se rompe con facilidad si la ,La diadema se rompe con facilidad si la doblas varias veces,2024-10-07,Si,11,negativa
+R1058,EchoWave,4,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-11-24,No,50,positiva
+R1059,StellarSound,1,Se calienta mucho en los oídos después d,Se calienta mucho en los oídos después de 1 hora de uso,2024-06-22,Si,76,negativa
+R1060,HyperBass,3,El volumen máximo es muy bajo para ambie,El volumen máximo es muy bajo para ambientes ruidosos,2024-07-23,Si,141,negativa
+R1061,ClearTone,2,No incluye cable auxiliar en la caja,No incluye cable auxiliar en la caja,2024-10-19,Si,103,negativa
+R1062,ZenSound,1,"El control táctil es muy sensible, cambi","El control táctil es muy sensible, cambia canciones sin querer",2024-04-14,No,82,negativa
+R1063,EchoWave,2,Las almohadillas se deterioran muy rápid,"Las almohadillas se deterioran muy rápido, en 3 meses ya se pelan",2024-08-26,No,43,negativa
+R1064,StellarSound,5,"Muy buena relación precio-calidad, los r","Muy buena relación precio-calidad, los recomiendo",2024-06-03,Si,79,positiva
+R1065,SoundMax,1,El micrófono tiene mucho ruido de fondo ,El micrófono tiene mucho ruido de fondo en llamadas,2024-01-08,Si,18,negativa
+R1066,AudioPro,3,No es compatible con asistentes de voz c,No es compatible con asistentes de voz como Alexa o Google,2024-12-23,Si,126,negativa
+R1067,BassKing,1,El audio se corta constantemente después,El audio se corta constantemente después de 2 semanas de uso,2024-07-08,Si,132,negativa
+R1068,BassKing,3,El sonido del bajo es demasiado exagerad,El sonido del bajo es demasiado exagerado y distorsiona,2024-08-05,Si,135,negativa
+R1069,StellarSound,5,El diseño es elegante y se ven premium p,El diseño es elegante y se ven premium para su precio,2024-12-17,Si,140,positiva
+R1070,NovaBeat,1,"La garantía es difícil de reclamar, el s","La garantía es difícil de reclamar, el soporte no responde",2024-05-25,Si,70,negativa
+R1071,ZenSound,5,La cancelación de ruido funciona muy bie,La cancelación de ruido funciona muy bien en el metro,2024-08-03,No,73,positiva
+R1072,EchoWave,2,Se calienta mucho en los oídos después d,Se calienta mucho en los oídos después de 1 hora de uso,2024-02-05,Si,59,negativa
+R1073,BassKing,1,Las almohadillas se deterioran muy rápid,"Las almohadillas se deterioran muy rápido, en 3 meses ya se pelan",2024-07-14,Si,138,negativa
+R1074,PureAudio,1,Las almohadillas se deterioran muy rápid,"Las almohadillas se deterioran muy rápido, en 3 meses ya se pelan",2024-07-25,No,5,negativa
+R1075,SoundMax,5,El diseño es elegante y se ven premium p,El diseño es elegante y se ven premium para su precio,2024-06-10,Si,107,positiva
+R1076,StellarSound,3,"Se escucha eco en las llamadas, la otra ","Se escucha eco en las llamadas, la otra persona se queja",2024-04-16,Si,69,negativa
+R1077,HyperBass,1,No incluye cable auxiliar en la caja,No incluye cable auxiliar en la caja,2024-11-22,Si,42,negativa
+R1078,EchoWave,4,Compatibles con todos mis dispositivos s,Compatibles con todos mis dispositivos sin ningún problema,2024-01-13,No,144,positiva
+R1079,ClearTone,4,Llegaron antes de lo esperado y muy bien,Llegaron antes de lo esperado y muy bien empacados,2024-08-06,Si,66,positiva
+R1080,HyperBass,1,Se desconecta solo cuando el teléfono es,Se desconecta solo cuando el teléfono está a más de 5 metros,2024-06-25,Si,71,negativa
+R1081,BassKing,5,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-08-01,No,138,positiva
+R1082,BassKing,2,El sonido del bajo es demasiado exagerad,El sonido del bajo es demasiado exagerado y distorsiona,2024-11-02,Si,63,negativa
+R1083,ClearTone,1,El embalaje llegó dañado y los auricular,El embalaje llegó dañado y los auriculares tenían golpes,2024-04-05,Si,29,negativa
+R1084,ZenSound,4,El diseño es elegante y se ven premium p,El diseño es elegante y se ven premium para su precio,2024-06-06,No,29,positiva
+R1085,BassKing,4,Se conectan instantáneamente al encender,"Se conectan instantáneamente al encender, sin complicaciones",2024-10-01,Si,147,positiva
+R1086,AudioPro,5,Llegaron antes de lo esperado y muy bien,Llegaron antes de lo esperado y muy bien empacados,2024-02-19,No,62,positiva
+R1087,BassKing,2,El embalaje llegó dañado y los auricular,El embalaje llegó dañado y los auriculares tenían golpes,2024-10-26,Si,88,negativa
+R1088,BassKing,3,El estuche de transporte es de plástico ,El estuche de transporte es de plástico muy frágil,2024-09-21,Si,3,negativa
+R1089,PureAudio,5,La batería dura exactamente lo que prome,"La batería dura exactamente lo que prometen, muy satisfecho",2024-06-21,Si,39,positiva
+R1090,ZenSound,3,Los botones físicos son muy pequeños y d,Los botones físicos son muy pequeños y difíciles de presionar,2024-10-26,No,123,negativa
+R1091,ZenSound,3,No es compatible con asistentes de voz c,No es compatible con asistentes de voz como Alexa o Google,2024-06-28,Si,22,negativa
+R1092,NovaBeat,2,El sonido del bajo es demasiado exagerad,El sonido del bajo es demasiado exagerado y distorsiona,2024-10-20,No,97,negativa
+R1093,ClearTone,2,Se calienta mucho en los oídos después d,Se calienta mucho en los oídos después de 1 hora de uso,2024-08-07,Si,66,negativa
+R1094,EchoWave,3,La carga tarda 3 horas y solo duran 15 h,La carga tarda 3 horas y solo duran 15 horas reales,2024-01-17,Si,21,negativa
+R1095,EchoWave,2,"La garantía es difícil de reclamar, el s","La garantía es difícil de reclamar, el soporte no responde",2024-04-23,Si,125,negativa
+R1096,ZenSound,1,"La batería no dura lo que dicen, máximo ","La batería no dura lo que dicen, máximo 20 horas reales",2024-04-13,No,62,negativa
+R1097,NovaBeat,3,El estuche de transporte es de plástico ,El estuche de transporte es de plástico muy frágil,2024-09-17,Si,108,negativa
+R1098,NovaBeat,5,"El micrófono es claro, mis compañeros me","El micrófono es claro, mis compañeros me escuchan perfecto en llamadas",2024-05-10,Si,59,positiva
+R1099,BassKing,1,Se calienta mucho en los oídos después d,Se calienta mucho en los oídos después de 1 hora de uso,2024-12-18,No,47,negativa

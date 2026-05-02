@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearWork Pro — Market Research Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --accent2: #ff6b6b;
+    --accent3: #43e97b;
+    --accent4: #f9ca24;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --card-glow: rgba(108,99,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 80px 60px 60px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.3);
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 48px;
+    letter-spacing: 0.05em;
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    max-width: 800px;
+  }
+
+  .hero-stat {
+    background: var(--surface);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+
+  .hero-stat:hover { background: var(--surface2); }
+
+  .hero-stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .hero-stat-val.green { color: var(--accent3); }
+  .hero-stat-val.red { color: var(--accent2); }
+  .hero-stat-val.yellow { color: var(--accent4); }
+  .hero-stat-val.purple { color: var(--accent); }
+
+  .hero-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* LAYOUT */
+  .main { padding: 60px; max-width: 1400px; margin: 0 auto; }
+
+  .section { margin-bottom: 72px; animation: fadeUp 0.5s ease both; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.1s; }
+  .section:nth-child(2) { animation-delay: 0.2s; }
+  .section:nth-child(3) { animation-delay: 0.3s; }
+  .section:nth-child(4) { animation-delay: 0.4s; }
+  .section:nth-child(5) { animation-delay: 0.5s; }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .card:hover {
+    border-color: rgba(108,99,255,0.4);
+    background: var(--surface2);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--card-glow);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--border); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--border); }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--border); }
+
+  .grid-2 .card, .grid-3 .card, .grid-4 .card { background: var(--surface); }
+
+  /* PRICE POSITIONING */
+  .price-track {
+    position: relative;
+    height: 64px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin: 24px 0;
+    overflow: hidden;
+  }
+
+  .price-segment {
+    position: absolute;
+    top: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    transition: opacity 0.3s;
+  }
+
+  .seg-low { left: 0; width: 20%; background: rgba(255,107,107,0.15); color: var(--accent2); border-right: 1px solid var(--border); }
+  .seg-mid { left: 20%; width: 40%; background: rgba(108,99,255,0.1); color: var(--accent); border-right: 1px solid var(--border); }
+  .seg-midhigh { left: 60%; width: 20%; background: rgba(67,233,123,0.08); color: var(--accent3); border-right: 1px solid var(--border); }
+  .seg-premium { left: 80%; width: 20%; background: rgba(249,202,36,0.08); color: var(--accent4); }
+
+  .price-pin {
+    position: absolute;
+    top: -6px;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+
+  .price-pin-line {
+    width: 2px;
+    height: 76px;
+    background: #fff;
+    margin: 0 auto;
+  }
+
+  .price-pin-label {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    background: #fff;
+    color: #000;
+    padding: 2px 8px;
+  }
+
+  /* PAIN POINTS BAR CHART */
+  .pain-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .pain-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    width: 140px;
+    flex-shrink: 0;
+    text-transform: capitalize;
+    letter-spacing: 0.05em;
+  }
+
+  .pain-bar-track {
+    flex: 1;
+    height: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pain-bar-fill {
+    height: 100%;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+  }
+
+  .pain-bar-fill.high { background: linear-gradient(90deg, rgba(255,107,107,0.6), rgba(255,107,107,0.3)); }
+  .pain-bar-fill.mid { background: linear-gradient(90deg, rgba(249,202,36,0.6), rgba(249,202,36,0.3)); }
+  .pain-bar-fill.low { background: linear-gradient(90deg, rgba(108,99,255,0.5), rgba(108,99,255,0.2)); }
+
+  .pain-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text);
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* GAPS */
+  .gap-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+    margin-bottom: 2px;
+  }
+
+  .gap-card:hover { border-color: rgba(108,99,255,0.4); }
+
+  .gap-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    width: 44px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .gap-score.s6 { color: var(--accent2); }
+  .gap-score.s5 { color: var(--accent4); }
+  .gap-score.s4 { color: var(--accent); }
+
+  .gap-area {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .gap-opp {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .gap-badges {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge-red { background: rgba(255,107,107,0.15); color: var(--accent2); border: 1px solid rgba(255,107,107,0.2); }
+  .badge-green { background: rgba(67,233,123,0.15); color: var(--accent3); border: 1px solid rgba(67,233,123,0.2); }
+  .badge-purple { background: rgba(108,99,255,0.15); color: var(--accent); border: 1px solid rgba(108,99,255,0.2); }
+  .badge-yellow { background: rgba(249,202,36,0.15); color: var(--accent4); border: 1px solid rgba(249,202,36,0.2); }
+
+  /* BULLETS */
+  .bullet-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 28px;
+    margin-bottom: 2px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .bullet-card:hover {
+    border-color: rgba(108,99,255,0.4);
+    background: var(--surface2);
+  }
+
+  .bullet-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    width: 40px;
+    text-align: center;
+  }
+
+  .bullet-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .bullet-body {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* KEYWORDS */
+  .kw-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .kw-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: all 0.2s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kw-tag::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .kw-tag.alta::after { background: var(--accent3); }
+  .kw-tag.media::after { background: var(--accent4); }
+  .kw-tag.baja::after { background: var(--accent2); }
+
+  .kw-tag:hover {
+    background: var(--surface2);
+    border-color: rgba(108,99,255,0.4);
+    transform: translateY(-2px);
+  }
+
+  .kw-vol {
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  /* NEXT STEPS */
+  .step-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-row:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--border);
+    line-height: 1;
+    width: 48px;
+    flex-shrink: 0;
+  }
+
+  .step-text {
+    padding-top: 6px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .step-text strong {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  /* RISKS */
+  .risk-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .risk-item:last-child { border-bottom: none; }
+
+  .risk-dot {
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 7px;
+  }
+
+  /* FINAL RECOMMENDATION */
+  .rec-box {
+    background: var(--surface);
+    border: 1px solid rgba(108,99,255,0.3);
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rec-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+  }
+
+  .rec-price {
+    font-family: 'Syne', sans-serif;
+    font-size: 64px;
+    font-weight: 800;
+    color: var(--accent3);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .rec-price-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .rec-prop {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.6;
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+  }
+
+  .differentiator-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .differentiator-list li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .differentiator-list li::before {
+    content: '→';
+    color: var(--accent3);
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  /* TITLE BOX */
+  .title-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  /* IMAGES STRATEGY */
+  .img-row {
+    display: flex;
+    gap: 2px;
+    background: var(--border);
+  }
+
+  .img-slot {
+    flex: 1;
+    background: var(--surface);
+    padding: 20px 14px;
+    text-align: center;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .img-slot:hover { background: var(--surface2); }
+
+  .img-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--border);
+    margin-bottom: 8px;
+  }
+
+  .img-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .img-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .footer-right {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* COMPETITOR RATINGS */
+  .comp-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comp-row:last-child { border-bottom: none; }
+
+  .comp-name {
+    font-size: 13px;
+    width: 150px;
+    flex-shrink: 0;
+    color: var(--text);
+  }
+
+  .comp-rating-bar {
+    flex: 1;
+    height: 20px;
+    background: var(--surface2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .comp-rating-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(108,99,255,0.7), rgba(108,99,255,0.3));
+    transition: width 1.2s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  .comp-rating-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    width: 36px;
+    text-align: right;
+  }
+
+  .comp-price-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent4);
+    width: 56px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-tag">Market Research Report · Auriculares Bluetooth · 2026</div>
+  <h1>ClearWork <span>Pro</span></h1>
+  <p class="hero-sub">Sistema multiagente de investigación de mercado · 8 agentes · 13 archivos generados</p>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val red">58%</div>
+      <div class="hero-stat-label">Reseñas negativas</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val purple">$54.99</div>
+      <div class="hero-stat-label">Precio óptimo</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val green">7</div>
+      <div class="hero-stat-label">Gaps detectados</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val yellow">6</div>
+      <div class="hero-stat-label">Keywords oportunidad</div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- PAIN POINTS -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">01 —</span>
+      <h2 class="section-title">Pain Points del Mercado</h2>
+    </div>
+    <div id="pain-chart">
+      <div class="pain-bar-row">
+        <span class="pain-label">Durabilidad</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill high" style="width:0%" data-w="73%"></div></div>
+        <span class="pain-pct">19.0%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Batería</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill mid" style="width:0%" data-w="40%"></div></div>
+        <span class="pain-pct">10.3%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Micrófono</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill mid" style="width:0%" data-w="40%"></div></div>
+        <span class="pain-pct">10.3%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Conectividad</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill low" style="width:0%" data-w="35%"></div></div>
+        <span class="pain-pct">8.6%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Cancelac. Ruido</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill low" style="width:0%" data-w="30%"></div></div>
+        <span class="pain-pct">6.9%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Controles</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill low" style="width:0%" data-w="25%"></div></div>
+        <span class="pain-pct">6.9%</span>
+      </div>
+      <div class="pain-bar-row">
+        <span class="pain-label">Comodidad</span>
+        <div class="pain-bar-track"><div class="pain-bar-fill low" style="width:0%" data-w="20%"></div></div>
+        <span class="pain-pct">5.2%</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPETIDORES + PRECIO -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">02 —</span>
+      <h2 class="section-title">Competidores y Posicionamiento de Precio</h2>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:2px">
+      <div class="card">
+        <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px">Rating por competidor</p>
+        <div id="comp-chart">
+          <div class="comp-row"><span class="comp-name">StellarSound ANC</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="94%"></div></div><span class="comp-rating-val">4.7</span><span class="comp-price-val">$99.99</span></div>
+          <div class="comp-row"><span class="comp-name">HyperBass X</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="92%"></div></div><span class="comp-rating-val">4.6</span><span class="comp-price-val">$89.99</span></div>
+          <div class="comp-row"><span class="comp-name">BassKing Elite</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="90%"></div></div><span class="comp-rating-val">4.5</span><span class="comp-price-val">$79.99</span></div>
+          <div class="comp-row"><span class="comp-name">NovaBeat Pro</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="88%"></div></div><span class="comp-rating-val">4.4</span><span class="comp-price-val">$69.99</span></div>
+          <div class="comp-row"><span class="comp-name">AudioPro 360</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="86%"></div></div><span class="comp-rating-val">4.3</span><span class="comp-price-val">$59.99</span></div>
+          <div class="comp-row"><span class="comp-name">SoundMax Pro X1</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="84%"></div></div><span class="comp-rating-val">4.2</span><span class="comp-price-val">$49.99</span></div>
+          <div class="comp-row"><span class="comp-name">PureAudio One</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="82%"></div></div><span class="comp-rating-val">4.1</span><span class="comp-price-val">$44.99</span></div>
+          <div class="comp-row"><span class="comp-name">ZenSound Lite</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="80%"></div></div><span class="comp-rating-val">4.0</span><span class="comp-price-val">$34.99</span></div>
+          <div class="comp-row"><span class="comp-name">ClearTone Basic</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="76%"></div></div><span class="comp-rating-val">3.8</span><span class="comp-price-val">$24.99</span></div>
+          <div class="comp-row"><span class="comp-name">EchoWave Mini</span><div class="comp-rating-bar"><div class="comp-rating-fill" style="width:0%" data-w="70%"></div></div><span class="comp-rating-val">3.5</span><span class="comp-price-val">$19.99</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px">Segmentos de precio</p>
+        <div class="grid-2" style="margin-bottom:16px">
+          <div style="background:var(--surface2);border:1px solid var(--border);padding:16px">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Económico &lt;$30</div>
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800">3.65</div>
+            <div style="font-size:11px;color:var(--muted)">rating prom. · 2 competidores</div>
+          </div>
+          <div style="background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.3);padding:16px">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Medio $30–$60 ★</div>
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--accent)">4.15</div>
+            <div style="font-size:11px;color:var(--muted)">rating prom. · 4 competidores</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);padding:16px">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Medio-Alto $60–$80</div>
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800">4.45</div>
+            <div style="font-size:11px;color:var(--muted)">rating prom. · 2 competidores</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);padding:16px">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Premium $80+</div>
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800">4.65</div>
+            <div style="font-size:11px;color:var(--muted)">rating prom. · 2 competidores</div>
+          </div>
+        </div>
+        <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Posicionamiento de precio</p>
+        <div class="price-track">
+          <div class="price-segment seg-low">ECON.</div>
+          <div class="price-segment seg-mid">MEDIO — OPORTUNIDAD</div>
+          <div class="price-segment seg-midhigh">M-ALTO</div>
+          <div class="price-segment seg-premium">PREM.</div>
+          <div class="price-pin" style="left:48%">
+            <div class="price-pin-label">$54.99</div>
+            <div class="price-pin-line"></div>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px">El pin blanco indica el precio objetivo de ClearWork Pro</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAP ANALYSIS -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">03 —</span>
+      <h2 class="section-title">GAP Analysis — Oportunidades Priorizadas</h2>
+    </div>
+
+    <div class="gap-card">
+      <div class="gap-score s6">6</div>
+      <div>
+        <div class="gap-area">Conectividad</div>
+        <div class="gap-opp">Bluetooth 5.2 con multiconexión simultánea (2 dispositivos) y modo universal Android/iOS</div>
+        <div class="gap-badges"><span class="badge badge-red">Impacto Alto</span><span class="badge badge-green">Facilidad Alta</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s6">6</div>
+      <div>
+        <div class="gap-area">Precio-Valor</div>
+        <div class="gap-opp">Posicionarse en $54.99 con atributos de gama alta: ANC + carga rápida + garantía 24 meses</div>
+        <div class="gap-badges"><span class="badge badge-red">Impacto Alto</span><span class="badge badge-green">Facilidad Alta</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s5">5</div>
+      <div>
+        <div class="gap-area">Durabilidad</div>
+        <div class="gap-opp">Materiales reforzados, almohadillas reemplazables y garantía extendida como diferenciador central</div>
+        <div class="gap-badges"><span class="badge badge-red">Impacto Alto</span><span class="badge badge-yellow">Facilidad Media</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s5">5</div>
+      <div>
+        <div class="gap-area">Batería</div>
+        <div class="gap-opp">Comunicar batería real verificada + indicador de batería preciso — honestidad como diferenciador</div>
+        <div class="gap-badges"><span class="badge badge-red">Impacto Alto</span><span class="badge badge-yellow">Facilidad Media</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s5">5</div>
+      <div>
+        <div class="gap-area">Micrófono</div>
+        <div class="gap-opp">Micrófono con reducción de ruido activa certificada para videollamadas — único en segmento medio</div>
+        <div class="gap-badges"><span class="badge badge-red">Impacto Alto</span><span class="badge badge-yellow">Facilidad Media</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s4">4</div>
+      <div>
+        <div class="gap-area">Soporte y Garantía</div>
+        <div class="gap-opp">Garantía 24 meses + soporte por WhatsApp + reemplazo express sin preguntas</div>
+        <div class="gap-badges"><span class="badge badge-yellow">Impacto Medio</span><span class="badge badge-green">Facilidad Alta</span></div>
+      </div>
+    </div>
+    <div class="gap-card">
+      <div class="gap-score s4">4</div>
+      <div>
+        <div class="gap-area">Compatibilidad</div>
+        <div class="gap-opp">Certificación oficial con Google Assistant y Siri — ningún competidor en segmento medio lo menciona</div>
+        <div class="gap-badges"><span class="badge badge-yellow">Impacto Medio</span><span class="badge badge-green">Facilidad Alta</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEYWORDS -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">04 —</span>
+      <h2 class="section-title">Keywords Subutilizadas — Alta Oportunidad</h2>
+    </div>
+    <div class="kw-grid" style="margin-bottom:24px">
+      <span class="kw-tag alta">auriculares para estudiar <span class="kw-vol">18k</span></span>
+      <span class="kw-tag alta">auriculares micrófono videollamadas <span class="kw-vol">14k</span></span>
+      <span class="kw-tag alta">auriculares trabajar desde casa <span class="kw-vol">11k</span></span>
+      <span class="kw-tag alta">auriculares carga rapida <span class="kw-vol">7.8k</span></span>
+      <span class="kw-tag alta">auriculares 40 horas batería <span class="kw-vol">8.5k</span></span>
+      <span class="kw-tag alta">auriculares plegables viaje <span class="kw-vol">9.2k</span></span>
+      <span class="kw-tag media">auriculares bluetooth niños <span class="kw-vol">19k</span></span>
+      <span class="kw-tag media">auriculares resistentes agua deporte <span class="kw-vol">16k</span></span>
+      <span class="kw-tag media">auriculares over ear bluetooth <span class="kw-vol">22k</span></span>
+      <span class="kw-tag media">headphones bluetooth baratos <span class="kw-vol">28k</span></span>
+      <span class="kw-tag baja">auriculares bluetooth <span class="kw-vol">95k</span></span>
+      <span class="kw-tag baja">mejores auriculares bluetooth 2024 <span class="kw-vol">35k</span></span>
+      <span class="kw-tag baja">auriculares gaming bluetooth <span class="kw-vol">31k</span></span>
+    </div>
+    <div style="display:flex;gap:20px">
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3)">█ Alta oportunidad (baja competencia + creciendo)</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent4)">█ Oportunidad media</span>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2)">█ Competida</span>
+    </div>
+  </section>
+
+  <!-- LISTING OPTIMIZADO -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">05 —</span>
+      <h2 class="section-title">Listing Optimizado</h2>
+    </div>
+
+    <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Título (177 caracteres)</p>
+    <div class="title-box" style="margin-bottom:32px">
+      ClearWork Pro — Auriculares Bluetooth con Cancelación de Ruido ANC, 45H Batería Real, Micrófono para Videollamadas | Bluetooth 5.2 | Garantía 24 Meses | Para Trabajar y Estudiar
+    </div>
+
+    <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Bullet points</p>
+    <div class="bullet-card">
+      <div class="bullet-icon">🎧</div>
+      <div><div class="bullet-title">Cancelación de ruido ANC certificada para videollamadas</div><div class="bullet-body">El único en su rango de precio con ANC real probada en entornos de trabajo remoto. Elimina ruido de fondo en Zoom, Teams y Meet.</div></div>
+    </div>
+    <div class="bullet-card">
+      <div class="bullet-icon">🔋</div>
+      <div><div class="bullet-title">45 horas de batería real verificada</div><div class="bullet-body">No prometidas, verificadas. Carga completa en 90 min o 3 horas de uso con solo 15 minutos de carga rápida.</div></div>
+    </div>
+    <div class="bullet-card">
+      <div class="bullet-icon">🎤</div>
+      <div><div class="bullet-title">Micrófono con reducción de ruido IA</div><div class="bullet-body">Tecnología de IA para llamadas cristalinas. Compatible certificado con Google Assistant y Siri.</div></div>
+    </div>
+    <div class="bullet-card">
+      <div class="bullet-icon">📱</div>
+      <div><div class="bullet-title">Bluetooth 5.2 multiconexión universal</div><div class="bullet-body">Conecta 2 dispositivos simultáneamente. Compatible con Android e iOS sin restricciones. Rango estable hasta 10 metros.</div></div>
+    </div>
+    <div class="bullet-card">
+      <div class="bullet-icon">🛡️</div>
+      <div><div class="bullet-title">Garantía real 24 meses + soporte por WhatsApp</div><div class="bullet-body">Almohadillas memory foam reemplazables incluidas. Reemplazo express sin preguntas. Respondemos en menos de 2 horas.</div></div>
+    </div>
+
+    <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:32px 0 12px">Estrategia de imágenes (7 fotos)</p>
+    <div class="img-row">
+      <div class="img-slot"><div class="img-num">1</div><div class="img-type">Principal</div><div class="img-desc">Fondo blanco ángulo 3/4</div></div>
+      <div class="img-slot"><div class="img-num">2</div><div class="img-type">Lifestyle</div><div class="img-desc">Trabajo desde casa</div></div>
+      <div class="img-slot"><div class="img-num">3</div><div class="img-type">Info ANC</div><div class="img-desc">Cómo funciona el ANC</div></div>
+      <div class="img-slot"><div class="img-num">4</div><div class="img-type">Info Batería</div><div class="img-desc">45h vs competidores</div></div>
+      <div class="img-slot"><div class="img-num">5</div><div class="img-type">Detalle</div><div class="img-desc">Almohadillas memory foam</div></div>
+      <div class="img-slot"><div class="img-num">6</div><div class="img-type">Garantía</div><div class="img-desc">Badge 24 meses</div></div>
+      <div class="img-slot"><div class="img-num">7</div><div class="img-type">Compat.</div><div class="img-desc">Android · iOS · Zoom</div></div>
+    </div>
+  </section>
+
+  <!-- RECOMENDACIÓN FINAL -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">06 —</span>
+      <h2 class="section-title">Recomendación Final</h2>
+    </div>
+    <div class="rec-box">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:48px;align-items:start">
+        <div>
+          <div class="rec-price">$54.99</div>
+          <div class="rec-price-sub">Precio objetivo</div>
+          <div style="margin-top:16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Rango viable</div>
+          <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)">$44.99 — $64.99</div>
+          <div style="margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Público objetivo</div>
+          <div style="font-size:13px;color:var(--text)">Profesionales remotos<br>y estudiantes 22–40 años</div>
+        </div>
+        <div>
+          <div class="rec-prop">
+            El único auricular en $54.99 con ANC certificada, micrófono IA, 45h batería verificada y garantía 24 meses con soporte real — sin comprometer durabilidad ni conectividad.
+          </div>
+          <ul class="differentiator-list">
+            <li>ANC certificada para videollamadas</li>
+            <li>Batería 45h verificada + carga rápida</li>
+            <li>Micrófono IA para llamadas</li>
+            <li>Bluetooth 5.2 multiconexión</li>
+            <li>Garantía 24 meses + soporte WhatsApp</li>
+            <li>Almohadillas memory foam reemplazables</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIESGOS Y PRÓXIMOS PASOS -->
+  <section class="section">
+    <div class="section-header">
+      <span class="section-num">07 —</span>
+      <h2 class="section-title">Riesgos y Próximos Pasos</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px">Riesgos a considerar</p>
+        <div class="risk-item"><div class="risk-dot"></div><div style="font-size:13px;color:var(--muted)">Verificar que el ANC realmente funcione antes de lanzar — es el claim principal</div></div>
+        <div class="risk-item"><div class="risk-dot"></div><div style="font-size:13px;color:var(--muted)">No inflar las horas de batería — la honestidad es el diferenciador</div></div>
+        <div class="risk-item"><div class="risk-dot"></div><div style="font-size:13px;color:var(--muted)">Tener soporte WhatsApp real operativo antes del lanzamiento</div></div>
+        <div class="risk-item"><div class="risk-dot"></div><div style="font-size:13px;color:var(--muted)">Asegurar calidad de almohadillas — es el pain point #1 del mercado</div></div>
+      </div>
+      <div class="card">
+        <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px">Próximos pasos</p>
+        <div class="step-row"><div class="step-num">01</div><div class="step-text"><strong>Validar prototipo</strong>Con las especificaciones definidas en este reporte</div></div>
+        <div class="step-row"><div class="step-num">02</div><div class="step-text"><strong>Pruebas de ANC</strong>En condiciones reales de oficina y estudio</div></div>
+        <div class="step-row"><div class="step-num">03</div><div class="step-text"><strong>Crear imágenes</strong>Según estrategia de 7 fotos definida</div></div>
+        <div class="step-row"><div class="step-num">04</div><div class="step-text"><strong>Lanzar a $44.99</strong>Precio introducción para generar reseñas iniciales</div></div>
+        <div class="step-row"><div class="step-num">05</div><div class="step-text"><strong>Subir a $54.99</strong>Al alcanzar 50 reseñas con rating ≥ 4.3</div></div>
+        <div class="step-row"><div class="step-num">06</div><div class="step-text"><strong>Activar PPC</strong>Con keywords subutilizadas identificadas</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-left">ClearWork Pro <span style="color:var(--muted);font-weight:400">· Market Research Report</span></div>
+  <div class="footer-right">Generado por Sistema Multiagente · 8 Agentes · Marzo 2026</div>
+</footer>
+
+<script>
+  // Animate bars on load
+  setTimeout(() => {
+    document.querySelectorAll('[data-w]').forEach(el => {
+      el.style.width = el.dataset.w;
+    });
+  }, 300);
+</script>
+</body>
+</html>
