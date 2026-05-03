@@ -43,6 +43,13 @@ def cargar_keywords(mercado):
 
 def clasificar_oportunidad(df):
     """Score basado en volumen, competencia y Cerebro IQ Score."""
+    num_cols = ["volumen_busqueda", "productos_competidores", "cerebro_iq_score",
+                "tendencia_30d", "title_density", "competitor_rank_avg"]
+    df = df.copy()
+    for col in num_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna(0)
+
     registros = []
     for _, row in df.iterrows():
         volumen      = row.get("volumen_busqueda") or 0

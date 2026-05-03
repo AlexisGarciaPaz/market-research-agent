@@ -211,10 +211,10 @@ def generar_reporte(mercado, segmentos, analisis_ia):
         r.append(f"- **Justificación:** {analisis_ia.get('justificacion_precio', '')}")
 
         r.append(f"\n### Estrategia de lanzamiento")
-        r.append(analisis_ia.get("estrategia_lanzamiento", ""))
+        r.append(str(analisis_ia.get("estrategia_lanzamiento", "")))
 
         r.append(f"\n### Precio psicológico recomendado")
-        r.append(analisis_ia.get("precio_psicologico", ""))
+        r.append(str(analisis_ia.get("precio_psicologico", "")))
 
         r.append(f"\n### Oportunidades de precio")
         r.append(f"- **Segmento saturado:** {analisis_ia.get('segmento_saturado', '')}")

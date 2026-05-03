@@ -9,6 +9,19 @@ REPORTS_DIR = Path("reports")
 OUTPUTS_DIR = Path("outputs")
 
 
+def _si(val, default=0):
+    """Safe int — handles NaN, None, and non-numeric gracefully."""
+    try:
+        if pd.isna(val):
+            return default
+    except (TypeError, ValueError):
+        pass
+    try:
+        return int(val) if val is not None else default
+    except (ValueError, TypeError):
+        return default
+
+
 # ─────────────────────────────────────────────
 # BLOQUE 1 — Carga de datos
 # ─────────────────────────────────────────────
@@ -32,7 +45,13 @@ def cargar_datos():
         ("pain_points",  "pain_points_ranked.csv"),
     ]:
         path = OUTPUTS_DIR / archivo
-        datos[nombre] = pd.read_csv(path) if path.exists() else pd.DataFrame()
+        if path.exists():
+            try:
+                datos[nombre] = pd.read_csv(path)
+            except pd.errors.EmptyDataError:
+                datos[nombre] = pd.DataFrame()
+        else:
+            datos[nombre] = pd.DataFrame()
 
     return datos
 
@@ -264,7 +283,7 @@ def seccion_competencia(datos):
 
     filas = ""
     for _, row in df.iterrows():
-        rev  = row.get(rev_col, 0) or 0
+        rev  = _si(row.get(rev_col))
         pct  = min(100, round(rev / max_rev * 100)) if max_rev > 0 else 0
         r_color = "#43e97b" if pct > 60 else "#6c63ff" if pct > 30 else "#2a2a3a"
         marca = escape_html(str(row.get("marca", "—"))[:25])
@@ -351,11 +370,11 @@ def seccion_keywords(datos):
     filas = ""
     for _, row in df.head(20).iterrows():
         kw     = escape_html(str(row.get("keyword", "")))
-        vol    = int(row.get("volumen_busqueda", 0) or 0)
-        comp   = int(row.get("competidores", 0) or 0)
-        iq     = int(row.get("cerebro_iq_score", 0) or 0)
+        vol    = _si(row.get("volumen_busqueda"))
+        comp   = _si(row.get("competidores"))
+        iq     = _si(row.get("cerebro_iq_score"))
         tend   = row.get("tendencia_30d")
-        score  = int(row.get("score_oportunidad", 0) or 0)
+        score  = _si(row.get("score_oportunidad"))
         nivel  = str(row.get("nivel_oportunidad", ""))
         pct    = min(100, round(vol / max_vol * 100)) if max_vol > 0 else 0
         tend_s = f"+{tend:.0f}x" if pd.notna(tend) and tend > 1 else ("—" if pd.isna(tend) else f"{tend:.1f}x")
@@ -421,7 +440,7 @@ def seccion_gaps(datos):
         evidencia = escape_html(str(row.get("evidencia", "")))
         impacto  = str(row.get("impacto", ""))
         facilidad = str(row.get("facilidad", ""))
-        score    = int(row.get("score", 0) or 0)
+        score    = _si(row.get("score"))
         color_b  = "#43e97b" if score >= 6 else "#f9ca24" if score >= 4 else "#ff6b6b"
 
         cards += f"""<div class="gap-card reveal" style="border-left:3px solid {color_b}">
@@ -460,7 +479,7 @@ def seccion_pain_points(datos):
         max_f = df["frecuencia"].max() or 1
         for _, row in df.sort_values("frecuencia", ascending=False).iterrows():
             tema   = escape_html(str(row.get("tema", "")).replace("_", " ").title())
-            freq   = int(row.get("frecuencia", 0) or 0)
+            freq   = _si(row.get("frecuencia"))
             pct    = float(row.get("porcentaje", 0) or 0)
             prio   = str(row.get("prioridad", "Baja"))
             bar_pct = min(100, round(freq / max_f * 100))

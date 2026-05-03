@@ -207,7 +207,10 @@ def ejecutar(mercado="suplementos"):
     reporte_path.write_text(reporte, encoding="utf-8")
     print(f"\n  Reporte guardado en: {reporte_path}")
 
-    pd.DataFrame(gaps).to_csv(OUTPUTS_DIR / "gap_opportunities.csv", index=False, encoding="utf-8")
+    if gaps:
+        pd.DataFrame(gaps).to_csv(OUTPUTS_DIR / "gap_opportunities.csv", index=False, encoding="utf-8")
+    else:
+        (OUTPUTS_DIR / "gap_opportunities.csv").unlink(missing_ok=True)
     print("\n  Agente de GAP analysis completado.")
     return gaps
 

@@ -26,8 +26,12 @@ def cargar_hallazgos():
     }
     for nombre, path in archivos.items():
         if path.exists():
-            hallazgos[nombre] = pd.read_csv(path)
-            print(f"  {nombre}: {len(hallazgos[nombre])} registros")
+            try:
+                hallazgos[nombre] = pd.read_csv(path)
+                print(f"  {nombre}: {len(hallazgos[nombre])} registros")
+            except pd.errors.EmptyDataError:
+                hallazgos[nombre] = pd.DataFrame()
+                print(f"  {nombre}: vacío")
     return hallazgos
 
 
