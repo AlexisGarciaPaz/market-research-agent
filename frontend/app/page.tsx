@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation"
 import {
   Search, Package, DollarSign, Hash, ChevronRight, Loader2,
   Link, TrendingUp, ShoppingCart, RefreshCw, Sparkles,
-  Upload, FileText, X, AlertCircle, Table2,
+  Upload, FileText, X, AlertCircle, Table2, ScanLine,
 } from "lucide-react"
+import { BarcodeScanner } from "./components/BarcodeScanner"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 
@@ -72,11 +73,38 @@ export default function HomePage() {
   const [csvError,        setCsvError]        = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // -- Scanner --
+  const [showScanner,  setShowScanner]  = useState(false)
+  const [scanFeedback, setScanFeedback] = useState("")
+
   // -- Común --
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState("")
 
   const asin = extraerAsin(urlAmazon)
+
+  // ── scanner de código de barras ───────────────────────────────────────────
+  async function buscarPorCodigo(codigo: string) {
+    setShowScanner(false)
+    setScanFeedback("Buscando en Amazon...")
+    try {
+      const res = await fetch(`${API_URL}/buscar-por-barcode/${encodeURIComponent(codigo)}`)
+      const data = await res.json()
+      if (data.asin) {
+        setUrlAmazon(data.url ?? "")
+        if (data.titulo) setProducto(data.titulo)
+        if (data.precio_amazon) setPrecioAmazon(String(data.precio_amazon))
+        setScanFeedback(`ASIN encontrado: ${data.asin}`)
+      } else {
+        setProducto(codigo)
+        setScanFeedback("Producto no encontrado en Amazon MX — datos pre-llenados con el código")
+      }
+    } catch {
+      setProducto(codigo)
+      setScanFeedback("Sin conexión al servidor — código guardado en el campo de búsqueda")
+    }
+    setTimeout(() => setScanFeedback(""), 4000)
+  }
 
   // ── cambio de modo ────────────────────────────────────────────────────────
   function cambiarModo(m: Modo) {
@@ -280,17 +308,37 @@ export default function HomePage() {
         {modo === "marca_propia" && "Investiga un mercado completo para lanzar tu propia marca"}
       </p>
 
+      {/* Scanner modal */}
+      {showScanner && (
+        <BarcodeScanner onResult={buscarPorCodigo} onClose={() => setShowScanner(false)} />
+      )}
+
       {/* ── MODO ARBITRAJE INDIVIDUAL ─────────────────────────────────────── */}
       {(modo === "arbitraje" || modo === "marca_propia") && (
         <form onSubmit={handleSubmitIndividual} className="flex flex-col gap-4">
 
           <Field label={modo === "arbitraje" ? "Producto" : "Mercado o producto de referencia"}>
-            <IconInput icon={<Package className="w-4 h-4 text-zinc-500" />}
-              value={producto} onChange={e => setProducto(e.target.value)}
-              placeholder={modo === "arbitraje"
-                ? "NOW Foods Vitamina C-1000 100 Cápsulas"
-                : "Suplementos vitamínicos, miel artesanal..."}
-              disabled={loading} type="text" autoComplete="off" spellCheck={false} />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <IconInput icon={<Package className="w-4 h-4 text-zinc-500" />}
+                  value={producto} onChange={e => setProducto(e.target.value)}
+                  placeholder={modo === "arbitraje"
+                    ? "NOW Foods Vitamina C-1000 100 Cápsulas"
+                    : "Suplementos vitamínicos, miel artesanal..."}
+                  disabled={loading} type="text" autoComplete="off" spellCheck={false} />
+              </div>
+              {modo === "arbitraje" && (
+                <button type="button" onClick={() => setShowScanner(true)}
+                  disabled={loading}
+                  title="Escanear código de barras"
+                  className="shrink-0 w-12 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:border-zinc-600 transition-colors disabled:opacity-40">
+                  <ScanLine className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {scanFeedback && (
+              <p className="text-xs text-emerald-500 mt-1 pl-1">{scanFeedback}</p>
+            )}
           </Field>
 
           {modo === "arbitraje" && (

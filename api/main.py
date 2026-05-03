@@ -208,6 +208,74 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
         _pipeline_lock.release()
 
 
+@app.get("/buscar-por-barcode/{codigo}")
+async def buscar_por_barcode(codigo: str):
+    """
+    Busca un producto en Amazon MX por código de barras (EAN-13 / UPC-A).
+    Retorna {asin, titulo, precio_amazon, url} o {asin: null, codigo}.
+    Amazon puede bloquear scraping — el frontend maneja el fallback.
+    """
+    import httpx
+    import re as _re
+
+    url = f"https://www.amazon.com.mx/s?k={codigo}&i=aps"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+            "Version/16.0 Mobile/15E148 Safari/604.1"
+        ),
+        "Accept-Language": "es-MX,es;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=8) as client:
+            resp = await client.get(url, headers=headers)
+
+        html = resp.text
+
+        # data-asin es el método más fiable en resultados de búsqueda
+        m = _re.search(r'data-asin="([A-Z0-9]{10})"', html)
+        if not m:
+            m = _re.search(r'/dp/([A-Z0-9]{10})', html)
+
+        if not m:
+            return {"asin": None, "codigo": codigo}
+
+        asin = m.group(1)
+
+        # Título del primer resultado
+        titulo = ""
+        t = _re.search(
+            r'<span[^>]*class="[^"]*a-size-(?:medium|base-plus)[^"]*a-color-base[^"]*'
+            r'a-text-normal[^"]*"[^>]*>(.*?)</span>',
+            html, _re.DOTALL
+        )
+        if t:
+            titulo = _re.sub(r"<[^>]+>", "", t.group(1)).strip()[:150]
+
+        # Precio del primer resultado
+        precio = 0.0
+        p = _re.search(r'<span[^>]*class="[^"]*a-price-whole[^"]*"[^>]*>([\d,]+)', html)
+        if p:
+            try:
+                precio = float(p.group(1).replace(",", ""))
+            except ValueError:
+                pass
+
+        return {
+            "asin":          asin,
+            "titulo":        titulo,
+            "precio_amazon": precio,
+            "url":           f"https://www.amazon.com.mx/dp/{asin}",
+            "codigo":        codigo,
+        }
+
+    except Exception as e:
+        return {"asin": None, "codigo": codigo, "error": str(e)[:80]}
+
+
 @app.post("/validar")
 async def iniciar_validacion(request: ValidarRequest):
     if not request.producto.strip():
