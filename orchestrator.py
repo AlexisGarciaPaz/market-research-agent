@@ -8,7 +8,7 @@ from datetime import datetime
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-from agents import ingesta, competencia, resenas, gap_analysis, precio_valor, keywords, concepto, listado_optimizado
+from agents import ingesta, competencia, resenas, gap_analysis, precio_valor, keywords, concepto, listado_optimizado, dashboard
 from agents.memoria import limpiar_memoria, leer_memoria
 
 def imprimir_header(mercado):
@@ -62,7 +62,8 @@ def imprimir_resumen_final(resultados, tiempo_total):
         print(f"    - outputs/{o.name}")
     print("="*55)
     print("\n  Pipeline completado exitosamente.")
-    print("  Abre reports/fase5_listado_optimizado.md para ver la recomendacion final.\n")
+    print("  Dashboard: reports/dashboard.html")
+    print("  Listing:   reports/fase5_listado_optimizado.md\n")
 
 def ejecutar_pipeline(mercado):
     print("\n  Preparando pipeline...")
@@ -81,6 +82,7 @@ def ejecutar_pipeline(mercado):
         ("Agente 6 - Keywords y SEO",             lambda: keywords.ejecutar(mercado)),
         ("Agente 7 - Concepto de Diferenciacion", lambda: concepto.ejecutar(mercado)),
         ("Agente 8 - Listado Optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
+        ("Agente 9 - Dashboard Visual",           lambda: dashboard.ejecutar(mercado)),
     ]
 
     for nombre, funcion in agentes:

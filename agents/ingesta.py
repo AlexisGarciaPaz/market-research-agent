@@ -12,11 +12,14 @@ load_dotenv()
 RAW_DIR     = Path("data/raw")
 REPORTS_DIR = Path("reports")
 
-# Columnas clave para identificar el tipo de CSV por su contenido
+# Columnas clave para identificar el tipo de CSV por su contenido.
+# Xray MX exporta "Fees MX$"; versiones USD antiguas usan "Fees $" —
+# usamos columnas estables que no cambian entre regiones.
 DETECTORES = {
-    "xray":         ["ASIN Sales", "Parent Level Sales", "Fees $", "Active Sellers"],
+    "xray":         ["ASIN Sales", "Parent Level Sales", "Active Sellers", "BSR"],
     "xray_keyword": ["Cerebro IQ Score", "Search Volume", "Title Density"],
     "asin_grabber": ["Price MX$", "Ratings", "Review Count", "Origin"],
+    "inventory":    ["Fulfillment", "Stock", "Seller Rating", "Positive Feedback %"],
 }
 
 
@@ -80,40 +83,54 @@ def detectar_tipo(df):
 # PARSERS POR TIPO DE ARCHIVO
 # ─────────────────────────────────────────────
 
+def _get(row, *keys):
+    """Devuelve el primer valor no-nulo entre las claves dadas (manejo multi-versión H10)."""
+    for k in keys:
+        v = row.get(k)
+        if v is not None and not (isinstance(v, float) and pd.isna(v)):
+            return v
+    return None
+
+
 def parsear_xray(df, mercado):
-    """Parsea Helium 10 Xray export → tabla productos."""
+    """Parsea Helium 10 Xray export → tabla productos.
+    Soporta columnas en MX$ ('Price  MX$', 'Fees  MX$') y USD ('Price $', 'Fees $')."""
     registros = []
     for _, row in df.iterrows():
         asin = str(row.get("ASIN", "")).strip()
         if not asin or asin in ("nan", "N/A"):
             continue
+
+        # Sub-filas de variantes (Display Order = "1.1.", "1.2."…) se incluyen normalmente
         registros.append({
             "asin":                     asin,
-            "titulo":                   str(row.get("Product Details", ""))[:500],
-            "marca":                    str(row.get("Brand", ""))[:255],
-            "categoria":                str(row.get("Category", ""))[:255]   if not pd.isna(row.get("Category", ""))   else None,
-            "size_tier":                str(row.get("Size Tier", ""))[:50]   if not pd.isna(row.get("Size Tier", ""))   else None,
-            "precio":                   limpiar_numero(row.get("Price $")),
-            "bsr":                      int(limpiar_numero(row.get("BSR")) or 0) or None,
-            "reviews_count":            int(limpiar_numero(row.get("Review Count")) or 0) or None,
-            "rating":                   limpiar_numero(row.get("Ratings")),
-            "ventas_mensuales_asin":    int(limpiar_numero(row.get("ASIN Sales")) or 0) or None,
-            "ventas_mensuales_parent":  int(limpiar_numero(row.get("Parent Level Sales")) or 0) or None,
-            "revenue_mensual_asin":     limpiar_numero(row.get("ASIN Revenue")),
-            "revenue_mensual_parent":   limpiar_numero(row.get("Parent Level Revenue")),
-            "fees":                     limpiar_numero(row.get("Fees $")),
-            "active_sellers":           int(limpiar_numero(row.get("Active Sellers")) or 0) or None,
-            "review_velocity":          int(limpiar_numero(row.get("Review velocity")) or 0) or None,
-            "fba":                      str(row.get("Fulfillment", "")).upper() in ("FBA", "AMZ"),
-            "dimensiones":              str(row.get("Dimensions", ""))[:100] if not pd.isna(row.get("Dimensions", "")) else None,
-            "peso_kg":                  limpiar_numero(row.get("Weight")),
-            "seller_nombre":            str(row.get("Seller", ""))[:255]     if not pd.isna(row.get("Seller", ""))     else None,
-            "seller_age_months":        int(limpiar_numero(row.get("Seller Age (mo)")) or 0) or None,
-            "buy_box":                  str(row.get("Buy Box", ""))[:255]    if not pd.isna(row.get("Buy Box", ""))    else None,
-            "best_seller":              limpiar_bool(row.get("Best Seller")),
-            "pais_vendedor":            str(row.get("Seller Country/Region", ""))[:10] if not pd.isna(row.get("Seller Country/Region", "")) else None,
-            "imagen_url":               str(row.get("Image URL", ""))        if not pd.isna(row.get("Image URL", ""))  else None,
-            "fecha_creacion_listing":   parsear_fecha(row.get("Creation Date")),
+            "titulo":                   str(_get(row, "Product Details") or "")[:500],
+            "marca":                    str(_get(row, "Brand") or "")[:255],
+            "categoria":                str(_get(row, "Category") or "")[:255] or None,
+            "size_tier":                str(_get(row, "Size Tier") or "")[:50] or None,
+            # Precio: versión MX primero, luego USD legacy
+            "precio":                   limpiar_numero(_get(row, "Price MX$", "Price $")),
+            "bsr":                      int(limpiar_numero(_get(row, "BSR")) or 0) or None,
+            "reviews_count":            int(limpiar_numero(_get(row, "Review Count")) or 0) or None,
+            "rating":                   limpiar_numero(_get(row, "Ratings")),
+            "ventas_mensuales_asin":    int(limpiar_numero(_get(row, "ASIN Sales")) or 0) or None,
+            "ventas_mensuales_parent":  int(limpiar_numero(_get(row, "Parent Level Sales")) or 0) or None,
+            "revenue_mensual_asin":     limpiar_numero(_get(row, "ASIN Revenue")),
+            "revenue_mensual_parent":   limpiar_numero(_get(row, "Parent Level Revenue")),
+            # Fees: versión MX primero, luego USD legacy
+            "fees":                     limpiar_numero(_get(row, "Fees MX$", "Fees $")),
+            "active_sellers":           int(limpiar_numero(_get(row, "Active Sellers")) or 0) or None,
+            "review_velocity":          int(limpiar_numero(_get(row, "Review velocity")) or 0) or None,
+            "fba":                      str(_get(row, "Fulfillment") or "").upper() in ("FBA", "AMZ"),
+            "dimensiones":              str(_get(row, "Dimensions") or "")[:100] or None,
+            "peso_kg":                  limpiar_numero(_get(row, "Weight")),
+            "seller_nombre":            str(_get(row, "Seller") or "")[:255] or None,
+            "seller_age_months":        int(limpiar_numero(_get(row, "Seller Age (mo)")) or 0) or None,
+            "buy_box":                  str(_get(row, "Buy Box") or "")[:255] or None,
+            "best_seller":              limpiar_bool(_get(row, "Best Seller")),
+            "pais_vendedor":            str(_get(row, "Seller Country/Region") or "")[:10] or None,
+            "imagen_url":               str(_get(row, "Image URL") or "") or None,
+            "fecha_creacion_listing":   parsear_fecha(_get(row, "Creation Date")),
             "fuente":                   "xray",
             "mercado":                  mercado,
             "fecha_captura":            date.today(),
@@ -144,29 +161,64 @@ def parsear_asin_grabber(df, mercado):
     return registros
 
 
-def parsear_xray_keyword(df, mercado):
-    """Parsea Helium 10 Xray Keyword / Cerebro export → tabla keywords."""
+def extraer_asin_de_nombre(nombre_archivo: str) -> str:
+    """Extrae el ASIN del nombre del archivo si está presente.
+    Ej: MX_AMAZON_cerebro_B09WBSG47Q_2026-05-02.csv → B09WBSG47Q"""
+    m = re.search(r'[_-]([A-Z0-9]{10})[_-]', nombre_archivo)
+    return m.group(1) if m else ""
+
+
+def parsear_xray_keyword(df, mercado, nombre_archivo=""):
+    """Parsea Helium 10 Cerebro / Magnet / Xray Keyword export → tabla keywords.
+
+    Cerebro: columnas 'Organic Rank', 'Sponsored Rank' (rank del ASIN objetivo)
+    Magnet:  columnas 'Keyword Sales', 'Competitor Rank (avg)', 'Suggested PPC Bid'
+    Ambos soportados simultáneamente.
+    """
+    asin_origen = extraer_asin_de_nombre(nombre_archivo)
     registros = []
+
     for _, row in df.iterrows():
         keyword = str(row.get("Keyword Phrase", "")).strip()
         if not keyword or keyword == "nan":
             continue
+
+        # Rank orgánico: Cerebro usa "Organic Rank", Magnet usa "Competitor Rank (avg)"
+        organic_rank = limpiar_numero(_get(row, "Organic Rank", "Competitor Rank (avg)"))
+
+        # Tendencia: Cerebro da % cambio absoluto (306 = +306%), Magnet da factor (2 = 2x)
+        # Se guarda tal cual; el agente de keywords lo usa solo como signo (positivo/negativo)
+        tendencia = limpiar_numero(_get(row, "Search Volume Trend"))
+
         registros.append({
-            "keyword":             keyword,
-            "volumen_busqueda":    int(limpiar_numero(row.get("Search Volume")) or 0) or None,
-            "tendencia_30d":       limpiar_numero(row.get("Search Volume Trend")),
-            "productos_competidores": int(limpiar_numero(row.get("Competing Products")) or 0) or None,
-            "cerebro_iq_score":    int(limpiar_numero(row.get("Cerebro IQ Score")) or 0) or None,
-            "keyword_sales":       int(limpiar_numero(row.get("Keyword Sales")) or 0) or None,
-            "title_density":       int(limpiar_numero(row.get("Title Density")) or 0) or None,
-            "competitor_rank_avg": limpiar_numero(row.get("Competitor Rank (avg)")),
-            "sugerido_ppc_bid":    limpiar_numero(row.get("Suggested PPC Bid")),
-            "fuente":              "xray_keyword",
-            "asin_origen":         "",
-            "mercado":             mercado,
-            "fecha_captura":       date.today(),
+            "keyword":                keyword,
+            "volumen_busqueda":       int(limpiar_numero(_get(row, "Search Volume")) or 0) or None,
+            "tendencia_30d":          tendencia,
+            "productos_competidores": int(limpiar_numero(_get(row, "Competing Products")) or 0) or None,
+            "cerebro_iq_score":       int(limpiar_numero(_get(row, "Cerebro IQ Score")) or 0) or None,
+            # Keyword Sales solo existe en Magnet; Cerebro no lo tiene
+            "keyword_sales":          int(limpiar_numero(_get(row, "Keyword Sales")) or 0) or None,
+            "title_density":          int(limpiar_numero(_get(row, "Title Density")) or 0) or None,
+            "competitor_rank_avg":    organic_rank,
+            "sugerido_ppc_bid":       limpiar_numero(_get(row, "Suggested PPC Bid")),
+            "fuente":                 "cerebro" if asin_origen else "xray_keyword",
+            "asin_origen":            asin_origen,
+            "mercado":                mercado,
+            "fecha_captura":          date.today(),
         })
     return registros
+
+
+def parsear_inventory(df):
+    """Parsea Helium 10 Inventory Levels — solo retorna un dict de resumen, no inserta en BD."""
+    resumen = []
+    for _, row in df.iterrows():
+        brand = str(row.get("Brand", "")).strip()
+        stock = str(row.get("Stock", "")).strip()
+        precio = limpiar_numero(row.get("Price"))
+        fulfillment = str(row.get("Fulfillment", "")).strip()
+        resumen.append(f"{brand} | {fulfillment} | stock: {stock} | precio: MX${precio or '?'}")
+    return resumen
 
 
 # ─────────────────────────────────────────────
@@ -275,7 +327,6 @@ def ejecutar(mercado="suplementos"):
 
         elif tipo == "asin_grabber":
             registros = parsear_asin_grabber(df, mercado)
-            # Deduplicar contra lo ya procesado en esta sesión
             nuevos = [r for r in registros if r["asin"] not in asins_vistos]
             asins_vistos.update(r["asin"] for r in nuevos)
             n = insertar_productos(nuevos, engine)
@@ -285,11 +336,18 @@ def ejecutar(mercado="suplementos"):
             procesados.append({"archivo": path.name, "tipo": tipo, "registros": n})
 
         elif tipo == "xray_keyword":
-            registros = parsear_xray_keyword(df, mercado)
+            registros = parsear_xray_keyword(df, mercado, nombre_archivo=path.name)
             n = insertar_keywords(registros, engine)
             resumen["keywords"] += n
-            print(f"    Insertados en keywords: {n}")
+            asin_ref = extraer_asin_de_nombre(path.name)
+            print(f"    Insertados en keywords: {n}{f' (ASIN origen: {asin_ref})' if asin_ref else ''}")
             procesados.append({"archivo": path.name, "tipo": tipo, "registros": n})
+
+        elif tipo == "inventory":
+            lineas_inv = parsear_inventory(df)
+            for l in lineas_inv:
+                print(f"    Inventario: {l}")
+            procesados.append({"archivo": path.name, "tipo": tipo, "registros": len(lineas_inv)})
 
         else:
             print(f"    Tipo no reconocido — omitido")
