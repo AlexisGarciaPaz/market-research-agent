@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from agents.memoria import obtener_contexto_para_claude, escribir_memoria
+from agents.memoria import obtener_contexto_para_claude, escribir_memoria, parsear_json_claude
 
 load_dotenv()
 
@@ -38,6 +38,37 @@ def cargar_hallazgos():
 # ─────────────────────────────────────────────
 # BLOQUE 2 — Concepto con Claude
 # ─────────────────────────────────────────────
+
+def _retry_concepto(client, mercado, precio_info):
+    prompt = f"""Crea el concepto de diferenciación para un producto nuevo en: {mercado}
+{precio_info}
+
+Responde ÚNICAMENTE con este JSON válido:
+{{
+  "nombre_concepto": "nombre del producto o marca sugerida",
+  "tagline": "tagline corto que refleje el diferenciador",
+  "precio_objetivo_mx": 0.0,
+  "posicionamiento": "2-3 oraciones sobre por qué gana en este mercado",
+  "mensaje_central": "frase de 1 línea para el cliente",
+  "segmento_objetivo": "descripción del cliente ideal",
+  "atributos_diferenciadores": [
+    {{"atributo": "descripción", "justificacion": "por qué importa para el cliente"}}
+  ]
+}}"""
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=800,
+            system="Responde SOLO con JSON válido.",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resultado = parsear_json_claude(resp.content[0].text, "concepto_retry")
+        if resultado.get("nombre_concepto"):
+            print("  [concepto] Retry exitoso.")
+        return resultado
+    except Exception as e:
+        print(f"  [concepto] Retry fallido: {e}")
+        return {}
+
 
 def definir_propuesta_valor(mercado, hallazgos):
     client = Anthropic()
@@ -124,38 +155,36 @@ Genera exactamente 6-8 atributos diferenciadores con justificación en datos."""
     )
 
     texto = respuesta.content[0].text
-    if "```json" in texto:
-        texto = texto.split("```json")[1].split("```")[0].strip()
-    elif "```" in texto:
-        texto = texto.split("```")[1].split("```")[0].strip()
-
-    try:
-        propuesta = json.loads(texto)
-    except json.JSONDecodeError:
-        inicio = texto.find("{")
-        fin    = texto.rfind("}") + 1
-        try:
-            propuesta = json.loads(texto[inicio:fin]) if inicio != -1 else {}
-        except (json.JSONDecodeError, ValueError):
-            propuesta = {}
-
+    propuesta = parsear_json_claude(texto, "concepto")
     propuesta["_tokens"] = {
         "entrada": respuesta.usage.input_tokens,
         "salida":  respuesta.usage.output_tokens,
     }
 
-    escribir_memoria("concepto", {
-        "nombre_concepto":   propuesta.get("nombre_concepto", ""),
-        "tagline":           propuesta.get("tagline", ""),
-        "posicionamiento":   propuesta.get("posicionamiento", ""),
-        "mensaje_central":   propuesta.get("mensaje_central", ""),
-        "segmento_objetivo": propuesta.get("segmento_objetivo", ""),
+    if not propuesta.get("nombre_concepto"):
+        print("  [concepto] nombre_concepto vacío — reintentando con prompt simplificado...")
+        propuesta = _retry_concepto(client, mercado, precio_info) or propuesta
+
+    hallazgos = {
+        "nombre_concepto":    propuesta.get("nombre_concepto", ""),
+        "tagline":            propuesta.get("tagline", ""),
+        "posicionamiento":    propuesta.get("posicionamiento", ""),
+        "mensaje_central":    propuesta.get("mensaje_central", ""),
+        "segmento_objetivo":  propuesta.get("segmento_objetivo", ""),
         "precio_objetivo_mx": propuesta.get("precio_objetivo_mx", 0),
         "atributos_top3": [
             a.get("atributo", "") if isinstance(a, dict) else str(a)
             for a in propuesta.get("atributos_diferenciadores", [])[:3]
         ],
-    })
+    }
+
+    campos_vacios = [k for k, v in hallazgos.items() if not v]
+    if campos_vacios:
+        print(f"  [concepto] ADVERTENCIA: campos vacíos en memoria: {campos_vacios}")
+    else:
+        print(f"  [concepto] Memoria OK — concepto={hallazgos['nombre_concepto']}")
+
+    escribir_memoria("concepto", hallazgos)
     return propuesta
 
 

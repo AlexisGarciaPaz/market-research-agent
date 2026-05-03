@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from agents.memoria import obtener_contexto_para_claude, escribir_memoria
+from agents.memoria import obtener_contexto_para_claude, escribir_memoria, parsear_json_claude
 
 load_dotenv()
 
@@ -44,6 +44,37 @@ def cargar_competidores():
 # ─────────────────────────────────────────────
 # BLOQUE 2 — GAP analysis con Claude
 # ─────────────────────────────────────────────
+
+def _retry_gap(client, mercado, pain_points, competidores):
+    prompt = f"""Identifica gaps de mercado para: {mercado}
+Pain points: {json.dumps((pain_points or [])[:5], ensure_ascii=False)[:500]}
+Competidores: {json.dumps((competidores or [])[:5], ensure_ascii=False)[:500]}
+
+Responde ÚNICAMENTE con este JSON válido:
+{{
+  "gap_mas_critico": "área y razón en 1 oración",
+  "combinacion_ganadora": "2-3 atributos que ningún competidor combina hoy",
+  "gaps": [
+    {{"area": "nombre", "problema_cliente": "qué experimentan",
+      "oportunidad": "qué debería ofrecer un producto nuevo",
+      "impacto": "Alto", "facilidad": "Media", "evidencia": "dato concreto"}}
+  ],
+  "resumen_mercado": "estado actual en 2 oraciones"
+}}"""
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=800,
+            system="Responde SOLO con JSON válido.",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resultado = parsear_json_claude(resp.content[0].text, "gap_retry")
+        if resultado.get("gap_mas_critico"):
+            print("  [gap_analysis] Retry exitoso.")
+        return resultado
+    except Exception as e:
+        print(f"  [gap_analysis] Retry fallido: {e}")
+        return {}
+
 
 def analizar_gaps_con_claude(mercado, pain_points, competidores):
     client = Anthropic()
@@ -92,32 +123,30 @@ Genera entre 5 y 8 gaps ordenados de mayor a menor oportunidad."""
     )
 
     texto = respuesta.content[0].text
-    if "```json" in texto:
-        texto = texto.split("```json")[1].split("```")[0].strip()
-    elif "```" in texto:
-        texto = texto.split("```")[1].split("```")[0].strip()
-
-    try:
-        resultado = json.loads(texto)
-    except json.JSONDecodeError:
-        inicio = texto.find("{")
-        fin    = texto.rfind("}") + 1
-        try:
-            resultado = json.loads(texto[inicio:fin]) if inicio != -1 else {}
-        except (json.JSONDecodeError, ValueError):
-            resultado = {}
-
+    resultado = parsear_json_claude(texto, "gap_analysis")
     resultado["_tokens"] = {
         "entrada": respuesta.usage.input_tokens,
         "salida":  respuesta.usage.output_tokens,
     }
 
-    escribir_memoria("gap_analysis", {
+    if not resultado.get("gap_mas_critico"):
+        print("  [gap_analysis] gap_mas_critico vacío — reintentando con prompt simplificado...")
+        resultado = _retry_gap(client, mercado, pain_points, competidores) or resultado
+
+    hallazgos = {
         "gap_mas_critico":      resultado.get("gap_mas_critico", ""),
         "combinacion_ganadora": resultado.get("combinacion_ganadora", ""),
         "top_gaps":             [g["area"] for g in resultado.get("gaps", [])[:5]],
         "resumen_mercado":      resultado.get("resumen_mercado", ""),
-    })
+    }
+
+    campos_vacios = [k for k, v in hallazgos.items() if not v]
+    if campos_vacios:
+        print(f"  [gap_analysis] ADVERTENCIA: campos vacíos en memoria: {campos_vacios}")
+    else:
+        print(f"  [gap_analysis] Memoria OK — gap_critico={hallazgos['gap_mas_critico'][:60]}")
+
+    escribir_memoria("gap_analysis", hallazgos)
     return resultado
 
 

@@ -98,3 +98,33 @@ def limpiar_memoria():
     if MEMORIA_PATH.exists():
         MEMORIA_PATH.unlink()
         print("  OK Memoria del pipeline anterior limpiada")
+
+
+def parsear_json_claude(texto: str, agente: str = "") -> dict:
+    """
+    Parsea respuesta JSON de Claude con logging detallado cuando falla.
+    Centraliza el bloque try/except repetido en cada agente.
+    """
+    etiqueta = f"[{agente.upper()}]" if agente else "[CLAUDE]"
+    original = texto
+
+    if "```json" in texto:
+        texto = texto.split("```json")[1].split("```")[0].strip()
+    elif "```" in texto:
+        texto = texto.split("```")[1].split("```")[0].strip()
+
+    try:
+        return json.loads(texto)
+    except json.JSONDecodeError:
+        inicio = texto.find("{")
+        fin    = texto.rfind("}") + 1
+        try:
+            if inicio != -1:
+                return json.loads(texto[inicio:fin])
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    print(f"\n  {etiqueta} ERROR: JSON inválido — texto crudo recibido (500 chars):")
+    print(f"  {repr(original[:500])}")
+    print(f"  {etiqueta} Hallazgos de este agente estarán vacíos en memoria.\n")
+    return {}

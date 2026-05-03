@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import create_engine, text
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from agents.memoria import obtener_contexto_para_claude, escribir_memoria
+from agents.memoria import obtener_contexto_para_claude, escribir_memoria, parsear_json_claude
 
 load_dotenv()
 
@@ -161,6 +161,37 @@ def analizar_vendedores(df):
 # BLOQUE 3 — Análisis con Claude + memoria
 # ─────────────────────────────────────────────
 
+def _retry_competencia(client, metricas):
+    prompt = f"""Necesito estos campos de análisis de competencia en Amazon México.
+Métricas del mercado: {json.dumps(metricas, ensure_ascii=False)[:1000]}
+
+Responde ÚNICAMENTE con este JSON válido:
+{{
+  "intensidad_competencia": "baja | media | alta | muy alta",
+  "marcas_dominantes": [{{"marca": "nombre", "posicion": "lider", "ventaja_principal": "descripción"}}],
+  "barreras_entrada": ["barrera 1", "barrera 2"],
+  "insight_clave": "hallazgo principal en 1 oración",
+  "estrategia_recomendada": {{
+    "posicionamiento": "cómo entrar al mercado",
+    "precio_sugerido_mx": "rango MX$X–MX$Y",
+    "diferenciador_clave": "qué debe tener el producto"
+  }}
+}}"""
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001", max_tokens=600,
+            system="Responde SOLO con JSON válido.",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resultado = parsear_json_claude(resp.content[0].text, "competencia_retry")
+        if resultado.get("intensidad_competencia"):
+            print("  [competencia] Retry exitoso.")
+        return resultado
+    except Exception as e:
+        print(f"  [competencia] Retry fallido: {e}")
+        return {}
+
+
 def analizar_con_claude(mercado, metricas, top_productos):
     client = Anthropic()
     contexto_previo = obtener_contexto_para_claude()
@@ -223,38 +254,34 @@ Responde ÚNICAMENTE con un JSON válido, sin backticks ni texto extra:
     )
 
     texto = respuesta.content[0].text
-    if "```json" in texto:
-        texto = texto.split("```json")[1].split("```")[0].strip()
-    elif "```" in texto:
-        texto = texto.split("```")[1].split("```")[0].strip()
-
-    try:
-        analisis = json.loads(texto)
-    except json.JSONDecodeError:
-        inicio = texto.find("{")
-        fin    = texto.rfind("}") + 1
-        try:
-            analisis = json.loads(texto[inicio:fin]) if inicio != -1 else {}
-        except (json.JSONDecodeError, ValueError):
-            analisis = {}
-
+    analisis = parsear_json_claude(texto, "competencia")
     analisis["_tokens"] = {
         "entrada": respuesta.usage.input_tokens,
         "salida":  respuesta.usage.output_tokens,
     }
 
-    # Escribir hallazgos clave en memoria para agentes posteriores
-    escribir_memoria("competencia", {
-        "intensidad_competencia":  analisis.get("intensidad_competencia", ""),
-        "marcas_dominantes":       [m["marca"] for m in analisis.get("marcas_dominantes", [])],
-        "segmentos_precio":        [s["rango_mx"] for s in analisis.get("segmentos_precio", [])],
-        "barreras_entrada":        analisis.get("barreras_entrada", []),
-        "posicionamiento_sugerido": analisis.get("estrategia_recomendada", {}).get("posicionamiento", ""),
-        "precio_sugerido_mx":      analisis.get("estrategia_recomendada", {}).get("precio_sugerido_mx", ""),
-        "diferenciador_clave":     analisis.get("estrategia_recomendada", {}).get("diferenciador_clave", ""),
-        "insight_clave":           analisis.get("insight_clave", ""),
-    })
+    if not analisis.get("intensidad_competencia"):
+        print("  [competencia] intensidad_competencia vacía — reintentando con prompt simplificado...")
+        analisis = _retry_competencia(client, metricas) or analisis
 
+    hallazgos = {
+        "intensidad_competencia":   analisis.get("intensidad_competencia", ""),
+        "marcas_dominantes":        [m["marca"] for m in analisis.get("marcas_dominantes", [])],
+        "segmentos_precio":         [s["rango_mx"] for s in analisis.get("segmentos_precio", [])],
+        "barreras_entrada":         analisis.get("barreras_entrada", []),
+        "posicionamiento_sugerido": analisis.get("estrategia_recomendada", {}).get("posicionamiento", ""),
+        "precio_sugerido_mx":       analisis.get("estrategia_recomendada", {}).get("precio_sugerido_mx", ""),
+        "diferenciador_clave":      analisis.get("estrategia_recomendada", {}).get("diferenciador_clave", ""),
+        "insight_clave":            analisis.get("insight_clave", ""),
+    }
+
+    campos_vacios = [k for k, v in hallazgos.items() if not v]
+    if campos_vacios:
+        print(f"  [competencia] ADVERTENCIA: campos vacíos en memoria: {campos_vacios}")
+    else:
+        print(f"  [competencia] Memoria OK — intensidad={hallazgos['intensidad_competencia']}")
+
+    escribir_memoria("competencia", hallazgos)
     return analisis
 
 
