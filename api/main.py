@@ -23,7 +23,7 @@ load_dotenv()
 from anthropic import Anthropic
 from agents import (
     ingesta, competencia, resenas, gap_analysis,
-    precio_valor, keywords, concepto, listado_optimizado
+    precio_valor, keywords, estacionalidad, concepto, listado_optimizado
 )
 from agents.memoria import limpiar_memoria, leer_memoria
 from agents.validador import ejecutar as ejecutar_validador
@@ -92,7 +92,7 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
         emit({
             "type": "progress",
             "step": step,
-            "total": 9,
+            "total": 10,
             "agent": agente,
             "message": mensaje,
             "status": status,
@@ -118,16 +118,17 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
             (4, "GAP Analysis",            lambda: gap_analysis.ejecutar(mercado)),
             (5, "Precio vs Valor",         lambda: precio_valor.ejecutar(mercado)),
             (6, "Keywords y SEO",          lambda: keywords.ejecutar(mercado)),
+            (7, "Estacionalidad",           lambda: estacionalidad.ejecutar(mercado)),
         ]
 
         if modo == "marca_propia":
             pasos += [
-                (7, "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
-                (8, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
+                (8, "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
+                (9, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
             ]
         else:  # arbitraje — skip concepto y listado, ir directo al validador
             pasos += [
-                (9, "Validacion de arbitraje", lambda: ejecutar_validador(
+                (10, "Validacion de arbitraje", lambda: ejecutar_validador(
                     producto, precio_compra, unidades, mercado,
                     url_amazon=url_amazon, precio_amazon=precio_amazon, ventas_mes=ventas_mes,
                 )),
@@ -143,11 +144,12 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
                 prog(step, nombre, f"Error: {str(e)[:60]}", "error")
                 resultados[nombre] = None
 
-        mem            = leer_memoria()
-        validador_mem  = mem.get("validador",          {}).get("hallazgos", {})
-        listado_mem    = mem.get("listado_optimizado", {}).get("hallazgos", {})
-        concepto_mem   = mem.get("concepto",           {}).get("hallazgos", {})
-        keywords_mem   = mem.get("keywords",           {}).get("hallazgos", {})
+        mem                = leer_memoria()
+        validador_mem      = mem.get("validador",          {}).get("hallazgos", {})
+        listado_mem        = mem.get("listado_optimizado", {}).get("hallazgos", {})
+        concepto_mem       = mem.get("concepto",           {}).get("hallazgos", {})
+        keywords_mem       = mem.get("keywords",           {}).get("hallazgos", {})
+        estacionalidad_mem = mem.get("estacionalidad",     {}).get("hallazgos", {})
         validador_full = resultados.get("Validacion de arbitraje") or {}
 
         final = {
@@ -186,6 +188,13 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
                 "mensaje_central": concepto_mem.get("mensaje_central", ""),
             },
             "keyword_principal": keywords_mem.get("keyword_principal", ""),
+            "estacionalidad": {
+                "riesgo_actual":  estacionalidad_mem.get("riesgo_actual", "BAJO"),
+                "advertencia":    estacionalidad_mem.get("advertencia", ""),
+                "pico_meses":     estacionalidad_mem.get("pico_meses", []),
+                "valle_meses":    estacionalidad_mem.get("valle_meses", []),
+                "tiene_estacionalidad": estacionalidad_mem.get("tiene_estacionalidad", False),
+            },
         }
 
         jobs[job_id]["result"] = final

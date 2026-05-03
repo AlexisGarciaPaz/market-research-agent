@@ -8,7 +8,7 @@ from datetime import datetime
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-from agents import ingesta, competencia, resenas, gap_analysis, precio_valor, keywords, concepto, listado_optimizado, dashboard
+from agents import ingesta, competencia, resenas, gap_analysis, precio_valor, keywords, estacionalidad, concepto, listado_optimizado, dashboard
 from agents.memoria import limpiar_memoria, leer_memoria
 
 def imprimir_header(mercado):
@@ -80,9 +80,10 @@ def ejecutar_pipeline(mercado):
         ("Agente 4 - GAP Analysis",               lambda: gap_analysis.ejecutar(mercado)),
         ("Agente 5 - Precio vs Valor",            lambda: precio_valor.ejecutar(mercado)),
         ("Agente 6 - Keywords y SEO",             lambda: keywords.ejecutar(mercado)),
-        ("Agente 7 - Concepto de Diferenciacion", lambda: concepto.ejecutar(mercado)),
-        ("Agente 8 - Listado Optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
-        ("Agente 9 - Dashboard Visual",           lambda: dashboard.ejecutar(mercado)),
+        ("Agente 7 - Estacionalidad",             lambda: estacionalidad.ejecutar(mercado)),
+        ("Agente 8 - Concepto de Diferenciacion", lambda: concepto.ejecutar(mercado)),
+        ("Agente 9 - Listado Optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
+        ("Agente 10 - Dashboard Visual",          lambda: dashboard.ejecutar(mercado)),
     ]
 
     for nombre, funcion in agentes:

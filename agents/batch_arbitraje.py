@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from agents.ingesta import normalizar_columnas, limpiar_numero, _get
+from agents.estacionalidad import obtener_penalizacion_batch, PENALIZACION_POR_RIESGO
 
 load_dotenv()
 
@@ -104,14 +105,15 @@ def calcular_financiero(producto):
     }
 
 
-def calcular_score_arbitraje(producto, financiero):
+def calcular_score_arbitraje(producto, financiero, penalizacion_estacional: int = 0):
     """
-    Score 0-100 basado en 4 factores determinísticos.
+    Score 0-100 basado en 4 factores determinísticos + penalización estacional opcional.
 
     ROI calculado    (40 pts) — rendimiento financiero puro
     BSR              (20 pts) — velocidad de ventas del producto
     Reviews + Rating (20 pts) — confianza del comprador
     Sellers activos  (20 pts) — competencia en Buy Box
+    Estacionalidad   (-15 pts máx) — penalización si el mes actual es temporada baja
     """
     if not financiero:
         return 0
@@ -148,7 +150,10 @@ def calcular_score_arbitraje(producto, financiero):
     elif sellers <= 10: score += 10
     elif sellers <= 20: score +=  5
 
-    return min(score, 100)
+    # Penalización estacional (hasta -15 pts si mes actual es temporada baja)
+    score -= penalizacion_estacional
+
+    return max(0, min(score, 100))
 
 
 def asignar_semaforo(roi, score):
@@ -347,23 +352,26 @@ def actualizar_historial(nombre_sesion, productos, batch_meta):
         path   = HISTORIAL_DIR / "productos" / f"{asin}.md"
         rutas_asin.append(str(path))
 
+        est = p.get("riesgo_estacional", "—")
         fila = (
             f"| {hoy} | {_mxn(fin.get('precio_compra'))} | "
             f"{_mxn(fin.get('precio_amazon'))} | "
             f"{fin.get('roi', 0):.1f}% | "
             f"{p.get('score_arbitraje', 0)} | "
-            f"{p.get('semaforo', '—')} |"
+            f"{p.get('semaforo', '—')} | {est} |"
         )
+
+        SEP_HIST = "|-------|--------------|---------------|-----|-------|----------|----|"
 
         if path.exists():
             contenido = path.read_text(encoding="utf-8")
-            # Actualizar fecha
             contenido = re.sub(r"Última actualización:.*", f"Última actualización: {hoy}", contenido)
-            # Insertar nueva fila en la tabla de historial
-            sep = "|-------|--------------|---------------|-----|-------|----------|"
-            if sep in contenido:
-                contenido = contenido.replace(sep, f"{sep}\n{fila}")
-            # Reemplazar sección de análisis más reciente
+            # Soportar separador viejo (sin columna estacionalidad) o nuevo
+            sep_viejo = "|-------|--------------|---------------|-----|-------|----------|"
+            if sep_viejo in contenido and SEP_HIST not in contenido:
+                contenido = contenido.replace(sep_viejo, SEP_HIST)
+            if SEP_HIST in contenido:
+                contenido = contenido.replace(SEP_HIST, f"{SEP_HIST}\n{fila}")
             nuevo_analisis = _bloque_analisis_reciente(p, fin, claude)
             if "## Análisis más reciente" in contenido:
                 partes = contenido.split("## Análisis más reciente")
@@ -382,8 +390,8 @@ def actualizar_historial(nombre_sesion, productos, batch_meta):
                 f"Última actualización: {hoy}",
                 "",
                 "## Historial de análisis",
-                "| Fecha | Precio compra | Precio Amazon | ROI | Score | Decisión |",
-                "|-------|--------------|---------------|-----|-------|----------|",
+                "| Fecha | Precio compra | Precio Amazon | ROI | Score | Decisión | Estacionalidad |",
+                SEP_HIST,
                 fila,
                 "",
                 "## Análisis más reciente",
@@ -425,15 +433,16 @@ def actualizar_historial(nombre_sesion, productos, batch_meta):
 
     lineas_sesion += [
         "## Ranking completo",
-        "| # | Producto | ASIN | Precio compra | Precio Amazon | ROI% | Score | Semáforo |",
-        "|---|---------|------|--------------|---------------|------|-------|---------|",
+        "| # | Producto | ASIN | Precio compra | Precio Amazon | ROI% | Score | Semáforo | Estacionalidad |",
+        "|---|---------|------|--------------|---------------|------|-------|---------|----------------|",
     ]
     for i, p in enumerate(sorted_prods, 1):
         fin = p.get("financiero") or {}
+        est = p.get("riesgo_estacional", "—")
         lineas_sesion.append(
             f"| {i} | {p.get('titulo','')[:40]} | `{p['asin']}` | "
             f"{_mxn(fin.get('precio_compra'))} | {_mxn(fin.get('precio_amazon'))} | "
-            f"{fin.get('roi', 0):.1f}% | {p.get('score_arbitraje', 0)} | {p.get('semaforo', '—')} |"
+            f"{fin.get('roi', 0):.1f}% | {p.get('score_arbitraje', 0)} | {p.get('semaforo', '—')} | {est} |"
         )
 
     if invertir:
@@ -600,18 +609,40 @@ def ejecutar(df, nombre_sesion="sesion_batch", precios_extra=None, engine=None):
     else:
         historial_bd = {}
 
-    # 3. Cálculos financieros y scores (sin Claude, instantáneo)
+    # 3. Estacionalidad — 1 llamada para el batch completo
+    categorias = [p.get("categoria") for p in con_precio if p.get("categoria")]
+    termino_estacional = max(set(categorias), key=categorias.count) if categorias else nombre_sesion
+    print(f"\n  Verificando estacionalidad para: {termino_estacional!r}...")
+    try:
+        pen_pts, advertencia_estacional = obtener_penalizacion_batch(termino_estacional)
+        riesgo_estacional = next(
+            k for k, v in PENALIZACION_POR_RIESGO.items() if v == pen_pts
+        )
+    except Exception as e:
+        print(f"  [estacionalidad] Error: {e} — sin penalización")
+        pen_pts, advertencia_estacional, riesgo_estacional = 0, "", "BAJO"
+
+    if pen_pts > 0:
+        print(f"  Riesgo estacional: {riesgo_estacional} (-{pen_pts} pts a cada score)")
+        if advertencia_estacional:
+            print(f"  {advertencia_estacional}")
+    else:
+        print(f"  Riesgo estacional: BAJO (sin penalización)")
+
+    # 4. Cálculos financieros y scores
     print(f"\n  Calculando financieros y scores...")
     for p in con_precio:
         fin      = calcular_financiero(p)
-        score    = calcular_score_arbitraje(p, fin) if fin else 0
+        score    = calcular_score_arbitraje(p, fin, pen_pts) if fin else 0
         semaforo = asignar_semaforo(fin["roi"], score) if fin else "DESCARTAR"
 
-        p["financiero"]      = fin
-        p["score_arbitraje"] = score
-        p["semaforo"]        = semaforo
-        p["en_historial_bd"] = p["asin"] in historial_bd
-        p["datos_historicos"] = historial_bd.get(p["asin"])
+        p["financiero"]             = fin
+        p["score_arbitraje"]        = score
+        p["semaforo"]               = semaforo
+        p["en_historial_bd"]        = p["asin"] in historial_bd
+        p["datos_historicos"]       = historial_bd.get(p["asin"])
+        p["riesgo_estacional"]      = riesgo_estacional
+        p["penalizacion_estacional"] = pen_pts
 
     invertir  = sum(1 for p in con_precio if p["semaforo"] == "INVERTIR")
     riesgo    = sum(1 for p in con_precio if p["semaforo"] == "RIESGO MEDIO")
@@ -634,10 +665,13 @@ def ejecutar(df, nombre_sesion="sesion_batch", precios_extra=None, engine=None):
     print(f"  Tokens: {tokens.get('entrada',0):,} entrada / {tokens.get('salida',0):,} salida")
 
     batch_meta = {
-        "top_3_asins":         analisis_claude.get("top_3_asins", []),
-        "competencia_interna": analisis_claude.get("competencia_interna"),
-        "advertencia_general": analisis_claude.get("advertencia_general"),
-        "tokens":              tokens,
+        "top_3_asins":              analisis_claude.get("top_3_asins", []),
+        "competencia_interna":      analisis_claude.get("competencia_interna"),
+        "advertencia_general":      analisis_claude.get("advertencia_general"),
+        "tokens":                   tokens,
+        "riesgo_estacional":        riesgo_estacional,
+        "advertencia_estacional":   advertencia_estacional,
+        "penalizacion_estacional":  pen_pts,
     }
 
     # 5. Historial markdown
