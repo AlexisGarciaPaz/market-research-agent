@@ -1,0 +1,23 @@
+# Configuración para el servicio Cron en Railway
+# ─────────────────────────────────────────────────────────────────
+# INSTRUCCIONES:
+# 1. En Railway dashboard → tu proyecto → "New Service" → "GitHub Repo"
+# 2. Selecciona el mismo repo (market-research-agent)
+# 3. En Settings → General → "Root Directory": dejar vacío (/)
+# 4. En Settings → Deploy → "Start Command":
+#    python scripts/monitor_precios.py
+# 5. En Settings → Deploy → habilita "Cron Job"
+#    Schedule: 0 9 * * *   (9am México cada día)
+# 6. Agrega las variables de entorno del servicio principal:
+#    DATABASE_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+# ─────────────────────────────────────────────────────────────────
+
+[build]
+builder = "nixpacks"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["python311", "gcc"]
+
+[deploy]
+startCommand = "python scripts/monitor_precios.py"
+cronSchedule = "0 9 * * *"
