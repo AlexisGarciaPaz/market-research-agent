@@ -10,6 +10,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from agents.ingesta import normalizar_columnas, limpiar_numero, _get
 from agents.estacionalidad import obtener_penalizacion_batch, PENALIZACION_POR_RIESGO
+from agents.restricciones import obtener_restriccion_batch
 
 load_dotenv()
 
@@ -629,6 +630,21 @@ def ejecutar(df, nombre_sesion="sesion_batch", precios_extra=None, engine=None):
     else:
         print(f"  Riesgo estacional: BAJO (sin penalización)")
 
+    # 3b. Restricciones — 1 llamada para el batch completo
+    print(f"\n  Verificando restricciones regulatorias para: {termino_estacional!r}...")
+    try:
+        nivel_restriccion, advertencia_restriccion = obtener_restriccion_batch(termino_estacional)
+    except Exception as e:
+        print(f"  [restricciones] Error: {e} — sin alertas")
+        nivel_restriccion, advertencia_restriccion = "BAJO", ""
+
+    if nivel_restriccion in ("ALTO", "MEDIO"):
+        print(f"  Restricción: {nivel_restriccion}")
+        if advertencia_restriccion:
+            print(f"  {advertencia_restriccion}")
+    else:
+        print(f"  Restricción: BAJO (categoría abierta)")
+
     # 4. Cálculos financieros y scores
     print(f"\n  Calculando financieros y scores...")
     for p in con_precio:
@@ -672,6 +688,8 @@ def ejecutar(df, nombre_sesion="sesion_batch", precios_extra=None, engine=None):
         "riesgo_estacional":        riesgo_estacional,
         "advertencia_estacional":   advertencia_estacional,
         "penalizacion_estacional":  pen_pts,
+        "nivel_restriccion":        nivel_restriccion,
+        "advertencia_restriccion":  advertencia_restriccion,
     }
 
     # 5. Historial markdown

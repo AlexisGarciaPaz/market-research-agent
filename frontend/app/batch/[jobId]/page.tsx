@@ -49,9 +49,11 @@ interface Producto {
 }
 
 interface BatchMeta {
-  top_3_asins:          string[]
-  competencia_interna:  string
-  advertencia_general:  string
+  top_3_asins:             string[]
+  competencia_interna:     string
+  advertencia_general:     string
+  nivel_restriccion?:      string
+  advertencia_restriccion?: string
 }
 
 interface BatchResult {
@@ -285,6 +287,24 @@ export default function BatchResultPage() {
           sub="Invertir / Riesgo / Descartar"
         />
       </div>
+
+      {/* Restricciones regulatorias — solo ALTO o MEDIO */}
+      {result.batch_meta?.nivel_restriccion && result.batch_meta.nivel_restriccion !== "BAJO" && (
+        <div className={`border rounded-xl px-4 py-3 ${
+          result.batch_meta.nivel_restriccion === "ALTO"
+            ? "bg-red-950/30 border-red-900/50"
+            : "bg-amber-950/20 border-amber-900/40"
+        }`}>
+          <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+            result.batch_meta.nivel_restriccion === "ALTO" ? "text-red-400" : "text-amber-400"
+          }`}>
+            Restricciones — Nivel {result.batch_meta.nivel_restriccion}
+          </p>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            {result.batch_meta.advertencia_restriccion || "Esta categoría requiere verificación antes de listar."}
+          </p>
+        </div>
+      )}
 
       {/* Advertencia general de Claude */}
       {result.batch_meta?.advertencia_general && (

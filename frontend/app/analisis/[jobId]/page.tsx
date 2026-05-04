@@ -59,6 +59,15 @@ interface AnalysisResult {
     mensaje_central: string
   }
   keyword_principal: string
+  restricciones?: {
+    nivel:                      string
+    requiere_aprobacion_amazon: boolean
+    cofepris_aplica:            boolean
+    certificaciones_requeridas: string[]
+    restricciones_principales:  string[]
+    advertencia:                string
+    puede_vender_sin_marca:     boolean
+  }
 }
 
 interface Step {
@@ -69,16 +78,18 @@ interface Step {
 }
 
 const STEP_LABELS: Record<number, string> = {
-  0: "Detectando nicho",
-  1: "Ingesta de datos",
-  2: "Competencia",
-  3: "Reseñas",
-  4: "GAP Analysis",
-  5: "Precio vs Valor",
-  6: "Keywords SEO",
-  7: "Concepto",
-  8: "Listing",
-  9: "Veredicto",
+  0:  "Detectando nicho",
+  1:  "Ingesta de datos",
+  2:  "Competencia",
+  3:  "Reseñas",
+  4:  "GAP Analysis",
+  5:  "Precio vs Valor",
+  6:  "Keywords SEO",
+  7:  "Estacionalidad",
+  8:  "Restricciones",
+  9:  "Concepto",
+  10: "Listing",
+  11: "Veredicto",
 }
 
 function verdictColor(v: string) {
@@ -383,6 +394,36 @@ export default function AnalisisPage() {
                       </li>
                     ))}
                   </ol>
+                </div>
+              )}
+
+              {/* Restricciones regulatorias */}
+              {result.restricciones?.nivel && result.restricciones.nivel !== "BAJO" && (
+                <div className={`border rounded-2xl p-4 ${
+                  result.restricciones.nivel === "ALTO"
+                    ? "bg-red-950/30 border-red-900/50"
+                    : "bg-amber-950/20 border-amber-900/40"
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className={`w-3.5 h-3.5 ${result.restricciones.nivel === "ALTO" ? "text-red-400" : "text-amber-400"}`} />
+                    <h3 className={`text-xs font-semibold uppercase tracking-wider ${result.restricciones.nivel === "ALTO" ? "text-red-400" : "text-amber-400"}`}>
+                      Restricciones — Nivel {result.restricciones.nivel}
+                    </h3>
+                  </div>
+                  {result.restricciones.advertencia && (
+                    <p className="text-xs text-zinc-300 leading-relaxed mb-2">
+                      {result.restricciones.advertencia}
+                    </p>
+                  )}
+                  {result.restricciones.restricciones_principales?.length > 0 && (
+                    <ul className="flex flex-col gap-1">
+                      {result.restricciones.restricciones_principales.map((r, i) => (
+                        <li key={i} className="text-xs text-zinc-500 flex gap-2">
+                          <span className="shrink-0">·</span>{r}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 

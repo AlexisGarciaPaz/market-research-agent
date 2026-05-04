@@ -23,7 +23,7 @@ load_dotenv()
 from anthropic import Anthropic
 from agents import (
     ingesta, competencia, resenas, gap_analysis,
-    precio_valor, keywords, estacionalidad, concepto, listado_optimizado
+    precio_valor, keywords, estacionalidad, restricciones, concepto, listado_optimizado
 )
 from agents.memoria import limpiar_memoria, leer_memoria
 from agents.validador import ejecutar as ejecutar_validador
@@ -92,7 +92,7 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
         emit({
             "type": "progress",
             "step": step,
-            "total": 10,
+            "total": 11,
             "agent": agente,
             "message": mensaje,
             "status": status,
@@ -119,16 +119,17 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
             (5, "Precio vs Valor",         lambda: precio_valor.ejecutar(mercado)),
             (6, "Keywords y SEO",          lambda: keywords.ejecutar(mercado)),
             (7, "Estacionalidad",           lambda: estacionalidad.ejecutar(mercado)),
+            (8, "Restricciones",            lambda: restricciones.ejecutar(mercado)),
         ]
 
         if modo == "marca_propia":
             pasos += [
-                (8, "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
-                (9, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
+                (9,  "Concepto de diferenciacion", lambda: concepto.ejecutar(mercado)),
+                (10, "Listado optimizado",         lambda: listado_optimizado.ejecutar(mercado)),
             ]
         else:  # arbitraje — skip concepto y listado, ir directo al validador
             pasos += [
-                (10, "Validacion de arbitraje", lambda: ejecutar_validador(
+                (11, "Validacion de arbitraje", lambda: ejecutar_validador(
                     producto, precio_compra, unidades, mercado,
                     url_amazon=url_amazon, precio_amazon=precio_amazon, ventas_mes=ventas_mes,
                 )),
@@ -149,7 +150,8 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
         listado_mem        = mem.get("listado_optimizado", {}).get("hallazgos", {})
         concepto_mem       = mem.get("concepto",           {}).get("hallazgos", {})
         keywords_mem       = mem.get("keywords",           {}).get("hallazgos", {})
-        estacionalidad_mem = mem.get("estacionalidad",     {}).get("hallazgos", {})
+        estacionalidad_mem  = mem.get("estacionalidad",  {}).get("hallazgos", {})
+        restricciones_mem   = mem.get("restricciones",   {}).get("hallazgos", {})
         validador_full = resultados.get("Validacion de arbitraje") or {}
 
         final = {
@@ -194,6 +196,15 @@ def ejecutar_pipeline(job_id: str, producto: str, precio_compra: float, unidades
                 "pico_meses":     estacionalidad_mem.get("pico_meses", []),
                 "valle_meses":    estacionalidad_mem.get("valle_meses", []),
                 "tiene_estacionalidad": estacionalidad_mem.get("tiene_estacionalidad", False),
+            },
+            "restricciones": {
+                "nivel":                      restricciones_mem.get("nivel_restriccion", "BAJO"),
+                "requiere_aprobacion_amazon": restricciones_mem.get("requiere_aprobacion_amazon", False),
+                "cofepris_aplica":            restricciones_mem.get("cofepris_aplica", False),
+                "certificaciones_requeridas": restricciones_mem.get("certificaciones_requeridas", []),
+                "restricciones_principales":  restricciones_mem.get("restricciones_principales", []),
+                "advertencia":                restricciones_mem.get("advertencia", ""),
+                "puede_vender_sin_marca":     restricciones_mem.get("puede_vender_sin_marca_registrada", True),
             },
         }
 
