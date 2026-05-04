@@ -1,7 +1,7 @@
 # agents/restricciones.py
 import os
 from anthropic import Anthropic
-from agents.memoria import guardar_en_memoria, parsear_json_claude
+from agents.memoria import escribir_memoria, parsear_json_claude
 
 PROMPT_SISTEMA = (
     "Eres experto en regulaciones de Amazon México y normativas mexicanas de ecommerce. "
@@ -71,7 +71,7 @@ def ejecutar(mercado: str) -> dict:
     if resultado.get("advertencia"):
         print(f"  [RESTRICCIONES] Advertencia: {resultado['advertencia']}")
 
-    guardar_en_memoria("restricciones", {"hallazgos": resultado})
+    escribir_memoria("restricciones", resultado)
     return resultado
 
 

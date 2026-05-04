@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import {
   ArrowLeft, Loader2, TrendingUp, DollarSign, Package,
-  AlertTriangle, XCircle, CheckCircle2, ChevronDown, ChevronUp,
-  BarChart2, Users, Star, Activity, RefreshCw, PlusCircle,
+  AlertTriangle, XCircle, CheckCircle2, ChevronRight,
+  BarChart2, Users, Star, Activity, PlusCircle, RefreshCw,
+  Download, Briefcase, X,
 } from "lucide-react"
 import { RegistrarInversionModal } from "../../components/RegistrarInversionModal"
 
@@ -44,8 +45,9 @@ interface Producto {
   reviews_count:    number | null
   rating:           number | null
   ventas_mes:       number | null
-  active_sellers:   number | null
-  fba:              boolean
+  active_sellers:    number | null
+  fba:               boolean
+  riesgo_estacional?: string
 }
 
 interface BatchMeta {
@@ -91,6 +93,40 @@ function semaforoIcon(s: Semaforo) {
   return <XCircle className="w-3.5 h-3.5" />
 }
 
+// ─── export Excel ─────────────────────────────────────────────────────────────
+
+async function exportarExcel(productos: Producto[], nombreSesion: string) {
+  const XLSX = await import("xlsx")
+  const rows = productos.map((p, i) => ({
+    "#":                 i + 1,
+    "ASIN":              p.asin,
+    "Título":            p.titulo || "",
+    "Categoría":         p.categoria || "",
+    "Semáforo":          p.semaforo,
+    "Score":             p.score_arbitraje,
+    "Precio compra MX$": p.financiero?.precio_compra ?? "",
+    "Precio Amazon MX$": p.financiero?.precio_amazon ?? "",
+    "ROI %":             p.financiero?.roi ?? "",
+    "Ganancia neta MX$": p.financiero?.ganancia_neta ?? "",
+    "Referral fee MX$":  p.financiero?.referral_fee ?? "",
+    "FBA fee MX$":       p.financiero?.fba_fee ?? "",
+    "BSR":               p.bsr ?? "",
+    "Reviews":           p.reviews_count ?? "",
+    "Rating":            p.rating ?? "",
+    "Ventas/mes":        p.ventas_mes ?? "",
+    "Sellers activos":   p.active_sellers ?? "",
+    "FBA":               p.fba ? "Sí" : "No",
+    "Estacionalidad":    p.riesgo_estacional || "",
+    "Razón Claude":      p.claude_analisis?.razon_verdicto || "",
+    "Insight":           p.claude_analisis?.insight || "",
+  }))
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, "Batch")
+  const fecha = new Date().toISOString().split("T")[0]
+  XLSX.writeFile(wb, `batch_${nombreSesion || "resultado"}_${fecha}.xlsx`)
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 export default function BatchResultPage() {
@@ -103,9 +139,10 @@ export default function BatchResultPage() {
   const [status,   setStatus]   = useState<"loading" | "done" | "error">("loading")
   const [progress, setProgress] = useState<{ step: number; msg: string } | null>(null)
   const [errMsg,   setErrMsg]   = useState("")
-  const [filter,   setFilter]   = useState<Semaforo | "TODOS">("TODOS")
-  const [sortKey,  setSortKey]  = useState<"score_arbitraje" | "roi" | "bsr">("score_arbitraje")
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [filter,          setFilter]          = useState<Semaforo | "TODOS">("TODOS")
+  const [sortKey,         setSortKey]         = useState<"score_arbitraje" | "roi" | "bsr">("score_arbitraje")
+  const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null)
+  const [showModal,       setShowModal]       = useState(false)
 
   const nombreSesion = searchParams.get("sesion") ?? ""
   const totalParam   = searchParams.get("total") ?? ""
@@ -247,14 +284,28 @@ export default function BatchResultPage() {
       <div>
         <BackBtn router={router} />
         <div className="flex items-center gap-3 mt-3">
-          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
             <BarChart2 className="w-5 h-5 text-zinc-300" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-zinc-50 leading-tight">Análisis batch</h1>
             {result.nombre_sesion && (
-              <p className="text-xs text-zinc-600 font-mono mt-0.5">{result.nombre_sesion}</p>
+              <p className="text-xs text-zinc-600 font-mono mt-0.5 truncate">{result.nombre_sesion}</p>
             )}
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => exportarExcel(result.productos, result.nombre_sesion)}
+              title="Exportar Excel"
+              className="w-9 h-9 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition-colors">
+              <Download className="w-4 h-4 text-zinc-400" />
+            </button>
+            <button
+              onClick={() => router.push("/portafolio")}
+              title="Ver portafolio"
+              className="w-9 h-9 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg transition-colors">
+              <Briefcase className="w-4 h-4 text-zinc-400" />
+            </button>
           </div>
         </div>
       </div>
@@ -390,8 +441,7 @@ export default function BatchResultPage() {
             <ProductCard
               key={p.asin}
               producto={p}
-              expanded={expanded === p.asin}
-              onToggle={() => setExpanded(expanded === p.asin ? null : p.asin)}
+              onSelect={() => setSelectedProduct(p)}
             />
           ))}
           {filtrados.length === 0 && (
@@ -432,6 +482,26 @@ export default function BatchResultPage() {
         <RefreshCw className="w-4 h-4" />
         Nuevo análisis
       </button>
+
+      {/* Side panel */}
+      {selectedProduct && (
+        <DetailPanel
+          producto={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onRegistrar={() => setShowModal(true)}
+        />
+      )}
+
+      {/* Modal registrar inversión */}
+      {showModal && selectedProduct && (
+        <RegistrarInversionModal
+          asin={selectedProduct.asin}
+          titulo={selectedProduct.titulo}
+          precio_compra_sugerido={selectedProduct.financiero?.precio_compra ?? 0}
+          onClose={() => setShowModal(false)}
+          onSuccess={() => { setShowModal(false); setSelectedProduct(null) }}
+        />
+      )}
 
     </main>
   )
@@ -525,11 +595,10 @@ function Top3Card({ producto: p, rank }: { producto: Producto; rank: number }) {
 }
 
 function ProductCard({
-  producto: p, expanded, onToggle,
+  producto: p, onSelect,
 }: {
-  producto: Producto; expanded: boolean; onToggle: () => void
+  producto: Producto; onSelect: () => void
 }) {
-  const [showModal, setShowModal] = useState(false)
   const roi = p.financiero?.roi ?? null
   const roiColor = roi == null ? "text-zinc-600"
     : roi >= 30  ? "text-emerald-400"
@@ -537,136 +606,28 @@ function ProductCard({
     : "text-red-400"
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      <button type="button" onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors text-left">
-        <SemaforoIcon semaforo={p.semaforo} />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-zinc-200 leading-tight truncate">
-            {p.titulo || p.asin}
-          </p>
-          <div className="flex items-center gap-3 mt-0.5">
-            <span className="text-xs text-zinc-600 font-mono">{p.asin}</span>
-            {p.en_historial_bd && (
-              <span className="text-xs text-blue-500">historial</span>
-            )}
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <p className={`text-sm font-semibold ${roiColor}`}>
-            {roi != null ? `${fmt(roi, 1)}%` : "—"}
-          </p>
-          <p className="text-xs text-zinc-600">Score {p.score_arbitraje}</p>
-        </div>
-        {expanded
-          ? <ChevronUp   className="w-4 h-4 text-zinc-600 shrink-0" />
-          : <ChevronDown className="w-4 h-4 text-zinc-600 shrink-0" />}
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t border-zinc-800 flex flex-col gap-4">
-
-          {/* Financiero */}
-          {p.financiero && (
-            <div>
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
-                Financiero
-              </p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <FinRow label="Precio compra"  value={`MX$${fmt(p.financiero.precio_compra,  2)}`} />
-                <FinRow label="Precio Amazon"  value={`MX$${fmt(p.financiero.precio_amazon,  2)}`} />
-                <FinRow label="Referral fee"   value={`MX$${fmt(p.financiero.referral_fee,   2)}`} />
-                <FinRow label="FBA fee"        value={`MX$${fmt(p.financiero.fba_fee,        2)}`} />
-                <FinRow label="Ganancia neta"  value={`MX$${fmt(p.financiero.ganancia_neta,  2)}`}
-                  highlight={p.financiero.ganancia_neta > 0} />
-                <FinRow label="ROI"            value={`${fmt(p.financiero.roi, 1)}%`}
-                  highlight={p.financiero.roi >= 30} />
-              </div>
-            </div>
-          )}
-
-          {/* Métricas de mercado */}
-          <div>
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
-              Métricas
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {p.bsr && (
-                <Chip icon={<BarChart2 className="w-3 h-3" />} label={`BSR ${fmt(p.bsr)}`} />
-              )}
-              {p.reviews_count != null && (
-                <Chip icon={<Users className="w-3 h-3" />} label={`${fmt(p.reviews_count)} reseñas`} />
-              )}
-              {p.rating != null && (
-                <Chip icon={<Star className="w-3 h-3" />} label={`${p.rating} estrellas`} />
-              )}
-              {p.ventas_mes != null && (
-                <Chip icon={<Activity className="w-3 h-3" />} label={`${fmt(p.ventas_mes)} ventas/mes`} />
-              )}
-              {p.active_sellers != null && (
-                <Chip icon={<Users className="w-3 h-3" />} label={`${p.active_sellers} sellers`} />
-              )}
-              {p.fba && (
-                <Chip icon={<Package className="w-3 h-3" />} label="FBA" />
-              )}
-            </div>
-          </div>
-
-          {/* Claude análisis */}
-          {p.claude_analisis && (
-            <div>
-              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">
-                Análisis IA
-              </p>
-              {p.claude_analisis.razon_verdicto && (
-                <p className="text-xs text-zinc-400 leading-relaxed mb-2">
-                  {p.claude_analisis.razon_verdicto}
-                </p>
-              )}
-              {p.claude_analisis.riesgos?.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  {p.claude_analisis.riesgos.map((r: string, i: number) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-zinc-500">{r}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Historial previo */}
+    <button type="button" onClick={onSelect}
+      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 active:bg-zinc-800/70 transition-colors text-left">
+      <SemaforoIcon semaforo={p.semaforo} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-zinc-200 leading-tight truncate">
+          {p.titulo || p.asin}
+        </p>
+        <div className="flex items-center gap-3 mt-0.5">
+          <span className="text-xs text-zinc-600 font-mono">{p.asin}</span>
           {p.en_historial_bd && (
-            <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg px-3 py-2">
-              <p className="text-xs text-blue-400">
-                Este ASIN ya fue analizado anteriormente y está en tu historial.
-              </p>
-            </div>
-          )}
-
-          {/* Registrar inversión */}
-          {p.semaforo === "INVERTIR" && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-900/40 hover:bg-emerald-900/70 border border-emerald-800/50 text-emerald-300 text-xs font-medium rounded-lg transition-colors">
-              <PlusCircle className="w-3.5 h-3.5" />
-              Registrar inversión
-            </button>
+            <span className="text-xs text-blue-500">historial</span>
           )}
         </div>
-      )}
-
-      {showModal && (
-        <RegistrarInversionModal
-          asin={p.asin}
-          titulo={p.titulo}
-          precio_compra_sugerido={p.financiero?.precio_compra ?? 0}
-          onClose={() => setShowModal(false)}
-          onSuccess={() => setShowModal(false)}
-        />
-      )}
-    </div>
+      </div>
+      <div className="text-right shrink-0">
+        <p className={`text-sm font-semibold ${roiColor}`}>
+          {roi != null ? `${fmt(roi, 1)}%` : "—"}
+        </p>
+        <p className="text-xs text-zinc-600">Score {p.score_arbitraje}</p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-zinc-700 shrink-0" />
+    </button>
   )
 }
 
@@ -714,5 +675,139 @@ function Chip({ icon, label }: { icon: React.ReactNode; label: string }) {
     <div className="flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-400">
       {icon}{label}
     </div>
+  )
+}
+
+// ─── DetailPanel (bottom sheet) ───────────────────────────────────────────────
+
+function DetailPanel({
+  producto: p, onClose, onRegistrar,
+}: {
+  producto: Producto
+  onClose:    () => void
+  onRegistrar: () => void
+}) {
+  const roi = p.financiero?.roi ?? null
+  const roiColor = roi == null ? "text-zinc-400"
+    : roi >= 30 ? "text-emerald-400"
+    : roi >= 15 ? "text-amber-400"
+    : "text-red-400"
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/70" onClick={onClose} />
+
+      {/* Sheet — sube desde abajo en móvil, panel derecho en sm+ */}
+      <div className="fixed z-50 inset-x-0 bottom-0 sm:inset-y-0 sm:right-0 sm:left-auto sm:w-96
+                      bg-zinc-950 border-t border-zinc-800 sm:border-t-0 sm:border-l
+                      overflow-y-auto rounded-t-2xl sm:rounded-none shadow-2xl
+                      max-h-[90vh] sm:max-h-none">
+
+        {/* Handle / Header */}
+        <div className="sticky top-0 bg-zinc-950 border-b border-zinc-800 px-4 py-3 flex items-center justify-between z-10">
+          <div className="flex items-center gap-2">
+            <SemaforoBadge semaforo={p.semaforo} />
+            <span className="text-xs text-zinc-600 font-mono ml-1">{p.asin}</span>
+          </div>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Título */}
+        <div className="px-4 pt-4 pb-2">
+          <p className="text-sm font-semibold text-zinc-100 leading-snug">{p.titulo || p.asin}</p>
+          {p.marca && <p className="text-xs text-zinc-500 mt-0.5">{p.marca}</p>}
+          {p.categoria && <p className="text-xs text-zinc-700 mt-0.5">{p.categoria}</p>}
+        </div>
+
+        <div className="px-4 pb-6 flex flex-col gap-4">
+
+          {/* Financiero */}
+          {p.financiero && (
+            <div>
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Financiero</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <FinRow label="Precio compra"  value={`MX$${fmt(p.financiero.precio_compra,  2)}`} />
+                <FinRow label="Precio Amazon"  value={`MX$${fmt(p.financiero.precio_amazon,  2)}`} />
+                <FinRow label="Referral fee"   value={`MX$${fmt(p.financiero.referral_fee,   2)}`} />
+                <FinRow label="FBA fee"        value={`MX$${fmt(p.financiero.fba_fee,        2)}`} />
+                <FinRow label="Ganancia neta"  value={`MX$${fmt(p.financiero.ganancia_neta,  2)}`}
+                  highlight={p.financiero.ganancia_neta > 0} />
+                <FinRow label="ROI"            value={`${fmt(p.financiero.roi, 1)}%`}
+                  highlight={p.financiero.roi >= 30} />
+              </div>
+              <div className="mt-2 text-center">
+                <span className={`text-2xl font-bold ${roiColor}`}>
+                  {roi != null ? `${fmt(roi, 1)}%` : "—"}
+                </span>
+                <span className="text-xs text-zinc-600 ml-1">ROI · Score {p.score_arbitraje}/100</span>
+              </div>
+            </div>
+          )}
+
+          {/* Métricas */}
+          <div>
+            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Métricas</p>
+            <div className="flex flex-wrap gap-2">
+              {p.bsr         != null && <Chip icon={<BarChart2 className="w-3 h-3" />} label={`BSR ${fmt(p.bsr)}`} />}
+              {p.reviews_count != null && <Chip icon={<Users className="w-3 h-3" />} label={`${fmt(p.reviews_count)} reseñas`} />}
+              {p.rating      != null && <Chip icon={<Star className="w-3 h-3" />} label={`${p.rating}★`} />}
+              {p.ventas_mes  != null && <Chip icon={<TrendingUp className="w-3 h-3" />} label={`${fmt(p.ventas_mes)} ventas/mes`} />}
+              {p.active_sellers != null && <Chip icon={<Users className="w-3 h-3" />} label={`${p.active_sellers} sellers`} />}
+              {p.fba && <Chip icon={<Package className="w-3 h-3" />} label="FBA" />}
+              {p.riesgo_estacional && p.riesgo_estacional !== "BAJO" && (
+                <Chip icon={<AlertTriangle className="w-3 h-3 text-amber-500" />}
+                  label={`Est. ${p.riesgo_estacional}`} />
+              )}
+            </div>
+          </div>
+
+          {/* Claude análisis */}
+          {p.claude_analisis && (
+            <div>
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Análisis IA</p>
+              {p.claude_analisis.insight && (
+                <p className="text-xs text-zinc-300 leading-relaxed mb-2 bg-zinc-900 rounded-lg px-3 py-2">
+                  {p.claude_analisis.insight}
+                </p>
+              )}
+              {p.claude_analisis.razon_verdicto && (
+                <p className="text-xs text-zinc-500 leading-relaxed mb-2">
+                  {p.claude_analisis.razon_verdicto}
+                </p>
+              )}
+              {p.claude_analisis.riesgos?.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {p.claude_analisis.riesgos.map((r: string, i: number) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-zinc-500">{r}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Historial */}
+          {p.en_historial_bd && (
+            <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg px-3 py-2">
+              <p className="text-xs text-blue-400">Este ASIN ya fue analizado anteriormente.</p>
+            </div>
+          )}
+
+          {/* CTA */}
+          {p.semaforo === "INVERTIR" && (
+            <button onClick={onRegistrar}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors">
+              <PlusCircle className="w-4 h-4" />
+              Registrar inversión
+            </button>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

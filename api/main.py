@@ -492,8 +492,9 @@ def ejecutar_pipeline_batch(job_id: str, csv_texto: str,
                 "reviews_count":  p.get("reviews_count"),
                 "rating":         p.get("rating"),
                 "ventas_mes":     p.get("ventas_mes"),
-                "active_sellers": p.get("active_sellers"),
-                "fba":            p.get("fba", False),
+                "active_sellers":   p.get("active_sellers"),
+                "fba":              p.get("fba", False),
+                "riesgo_estacional": p.get("riesgo_estacional", ""),
             }
 
         final = {
