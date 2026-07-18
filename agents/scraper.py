@@ -120,20 +120,21 @@ def filtrar_por_relevancia(productos: list, mercado: str) -> tuple:
     puede traer botellas de agua o accesorios de hidratación. Sin este filtro, los
     agentes analizan productos que no son lo que el usuario pidió.
 
-    Regla: se exigen TODOS los tokens significativos (1-2 palabras: todos; 3+: se permite
-    que falte uno). Con matching morfológico por prefijo, así 'termo para cerveza' exige
-    termo Y cerveza → un termo de agua (tiene 'termo' pero no 'cerveza') se descarta; y
-    'creatina monohidrato' matchea 'monohidratada' por prefijo → se mantiene. Casos límite
-    (ej: 'enfriador de cerveza' sin la palabra 'termo') los rescata el fallback IA (B).
-    Ordena por número de coincidencias. Retorna (relevantes, descartados).
+    Regla: un producto es relevante si su título contiene AL MENOS UNO de los tokens
+    significativos del mercado (con matching morfológico por prefijo). Esto mantiene a los
+    competidores reales del tipo de producto —'termo para cerveza' conserva todos los termos
+    (incluidos genéricos como Stanley, que sí compiten)— y descarta lo que no es del tipo:
+    accesorios de botella de agua, sensores, popotes (no dicen 'termo' ni 'cerveza').
+    Se ordena por número de coincidencias, así los que combinan ambos términos (más
+    específicos, ej. termos de cerveza) quedan primero. El fallback IA (B) rescata productos
+    relevantes que usan sinónimos no cubiertos por el keyword. Retorna (relevantes, descartados).
     """
     tokens_q = _tokens_significativos(mercado)
     if not tokens_q:
         return productos, []
     tokens_q_stem = [_stem_es(t) for t in tokens_q]
 
-    n = len(tokens_q_stem)
-    umbral = n if n <= 2 else n - 1  # 1-2 tokens: todos; 3+: permite que falte uno
+    umbral = 1  # basta el token del tipo de producto; el orden prioriza los más específicos
 
     relevantes, descartados = [], []
     for p in productos:
