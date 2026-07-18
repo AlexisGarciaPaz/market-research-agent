@@ -37,6 +37,7 @@ SCRAPERAPI_KEY       = os.getenv("SCRAPERAPI_KEY", "")
 UMBRAL_FRESCURA_DIAS = 7
 MAX_DETALLES_ASIN    = 20      # máx páginas de producto individuales por análisis
 DELAY_MIN, DELAY_MAX = 3, 6   # segundos entre requests directos (sin ScraperAPI)
+UMBRAL_RESCATE_IA    = 5       # si el filtro A deja menos de esto, se invoca el fallback IA (B)
 
 HEADERS = {
     "User-Agent": (
@@ -77,26 +78,47 @@ def _tokens_significativos(texto: str) -> list:
     return [t for t in toks if t not in _STOPWORDS_REL and len(t) > 2]
 
 
+def _stem_es(palabra: str) -> str:
+    """Stem ligero para español: quita plural (-es, -s) para unificar variantes
+    como cerveza/cervezas, termo/termos, capsula/capsulas."""
+    for suf in ("es", "s"):
+        if palabra.endswith(suf) and len(palabra) - len(suf) >= 4:
+            return palabra[:-len(suf)]
+    return palabra
+
+
+def _contar_matches(tokens_q_stem: list, titulo: str) -> int:
+    """Cuenta cuántos tokens del query (ya stemmed) aparecen en el título.
+    Compara por substring directo y por stem de cada palabra del título, para
+    tolerar plurales en cualquier dirección (query o título)."""
+    titulo_norm = _normalizar_rel(titulo)
+    palabras_stem = [_stem_es(w) for w in re.findall(r"[a-z0-9]+", titulo_norm)]
+    matches = 0
+    for st in tokens_q_stem:
+        if st in titulo_norm or any(st in w or w in st for w in palabras_stem):
+            matches += 1
+    return matches
+
+
 def filtrar_por_relevancia(productos: list, mercado: str) -> tuple:
-    """Descarta productos cuyo título no corresponde al mercado buscado.
+    """Descarta productos cuyo título no corresponde al mercado buscado (FILTRO A).
 
     Amazon devuelve resultados 'relacionados' amplios: buscar 'termo para cerveza'
     puede traer botellas de agua o accesorios de hidratación. Sin este filtro, los
     agentes analizan productos que no son lo que el usuario pidió.
 
     Regla: un producto es relevante si su título contiene al menos uno de los tokens
-    significativos del mercado. Los resultados se ordenan por número de coincidencias
-    (los más relevantes primero), para que los agentes prioricen los mejores matches.
-    Retorna (relevantes, descartados).
+    significativos del mercado (con stemming de plurales). Ordena por número de
+    coincidencias (los más relevantes primero). Retorna (relevantes, descartados).
     """
     tokens_q = _tokens_significativos(mercado)
     if not tokens_q:
         return productos, []
+    tokens_q_stem = [_stem_es(t) for t in tokens_q]
 
     relevantes, descartados = [], []
     for p in productos:
-        titulo_norm = _normalizar_rel(p.get("titulo", ""))
-        matches = sum(1 for t in tokens_q if t in titulo_norm)
+        matches = _contar_matches(tokens_q_stem, p.get("titulo", ""))
         if matches >= 1:
             p["_relevancia"] = matches
             relevantes.append(p)
@@ -105,6 +127,48 @@ def filtrar_por_relevancia(productos: list, mercado: str) -> tuple:
 
     relevantes.sort(key=lambda x: x.get("_relevancia", 0), reverse=True)
     return relevantes, descartados
+
+
+def rescatar_con_ia(descartados: list, mercado: str, limite: int = 15) -> list:
+    """Fallback IA (FILTRO B): cuando el filtro por palabras deja muy pocos productos,
+    pregunta a Claude cuáles de los descartados SÍ corresponden al mercado. Cubre
+    sinónimos y variantes que el stemming no captura (ej: cerveza→cervecero).
+    Usa Haiku porque es clasificación simple. Solo se invoca cuando hace falta."""
+    if not descartados:
+        return []
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    muestra = descartados[:limite]
+    lista = "\n".join(f"{i}. {p.get('titulo', '')[:120]}" for i, p in enumerate(muestra))
+    prompt = (
+        f'Mercado buscado: "{mercado}"\n\n'
+        f"Productos candidatos:\n{lista}\n\n"
+        "Indica cuáles corresponden al MISMO tipo de producto que el mercado buscado "
+        "(no accesorios de otra categoría ni productos distintos).\n"
+        'Responde SOLO con JSON: {"relevantes": [0, 2, 5]}'
+    )
+    try:
+        from anthropic import Anthropic
+        from agents.memoria import parsear_json_claude
+        client = Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system="Clasificas relevancia de productos. Respondes solo con JSON válido.",
+            messages=[{"role": "user", "content": prompt}],
+        )
+        data = parsear_json_claude(resp.content[0].text, "rescate_relevancia")
+        idxs = data.get("relevantes", [])
+        rescatados = [muestra[i] for i in idxs
+                      if isinstance(i, int) and 0 <= i < len(muestra)]
+        for p in rescatados:
+            p["_relevancia"] = 1
+        return rescatados
+    except Exception as e:
+        print(f"  [scraper] Rescate IA falló: {e}")
+        return []
 
 
 # ── Bloque 1: Frescura de datos ───────────────────────────────────────────────
@@ -596,9 +660,20 @@ def ejecutar(mercado: str, engine=None) -> str:
     # analizan productos que no corresponden a lo buscado (ej: 'termo para cerveza'
     # trayendo botellas de agua) y las conclusiones salen desviadas.
     if productos:
+        # A) Filtro por palabras + stemming (gratis)
         productos, descartados = filtrar_por_relevancia(productos, mercado)
         if descartados:
             print(f"  [scraper] {len(descartados)} productos descartados por no coincidir con '{mercado}'")
+
+        # B) Fallback IA: solo si A dejó muy pocos y hay descartados que revisar.
+        #    Rescata sinónimos/variantes que el stemming no captura.
+        if len(productos) < UMBRAL_RESCATE_IA and descartados:
+            print(f"  [scraper] Pocos relevantes ({len(productos)}) — revisando descartados con IA...")
+            rescatados = rescatar_con_ia(descartados, mercado)
+            if rescatados:
+                print(f"  [scraper] IA rescató {len(rescatados)} producto(s) relevante(s) adicional(es)")
+                productos.extend(rescatados)
+
         if 0 < len(productos) < 3:
             print(f"  [scraper] ADVERTENCIA: solo {len(productos)} productos relevantes para '{mercado}'.")
             print(f"  El análisis será limitado. Considera una búsqueda más específica o subir un CSV de Helium 10.")
