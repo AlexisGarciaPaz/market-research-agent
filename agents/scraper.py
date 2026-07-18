@@ -19,6 +19,7 @@ import csv
 import json
 import time
 import random
+import unicodedata
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -54,6 +55,56 @@ AUTOCOMPLETE = "https://completion.amazon.com/search/complete"
 def _slug(texto: str) -> str:
     """Normaliza texto para usar en nombres de archivo y comparaciones."""
     return re.sub(r"[^\w]", "_", texto.lower().strip())
+
+
+# ── Filtro de relevancia ──────────────────────────────────────────────────────
+
+_STOPWORDS_REL = {
+    "para", "de", "del", "la", "el", "los", "las", "con", "sin", "en", "y",
+    "por", "un", "una", "al", "a", "mejor", "comprar", "kit", "set",
+}
+
+
+def _normalizar_rel(texto: str) -> str:
+    """Minúsculas sin acentos."""
+    s = unicodedata.normalize("NFKD", str(texto)).encode("ascii", "ignore").decode("ascii")
+    return s.lower()
+
+
+def _tokens_significativos(texto: str) -> list:
+    """Tokens alfanuméricos relevantes (sin stopwords, > 2 caracteres)."""
+    toks = re.findall(r"[a-z0-9]+", _normalizar_rel(texto))
+    return [t for t in toks if t not in _STOPWORDS_REL and len(t) > 2]
+
+
+def filtrar_por_relevancia(productos: list, mercado: str) -> tuple:
+    """Descarta productos cuyo título no corresponde al mercado buscado.
+
+    Amazon devuelve resultados 'relacionados' amplios: buscar 'termo para cerveza'
+    puede traer botellas de agua o accesorios de hidratación. Sin este filtro, los
+    agentes analizan productos que no son lo que el usuario pidió.
+
+    Regla: un producto es relevante si su título contiene al menos uno de los tokens
+    significativos del mercado. Los resultados se ordenan por número de coincidencias
+    (los más relevantes primero), para que los agentes prioricen los mejores matches.
+    Retorna (relevantes, descartados).
+    """
+    tokens_q = _tokens_significativos(mercado)
+    if not tokens_q:
+        return productos, []
+
+    relevantes, descartados = [], []
+    for p in productos:
+        titulo_norm = _normalizar_rel(p.get("titulo", ""))
+        matches = sum(1 for t in tokens_q if t in titulo_norm)
+        if matches >= 1:
+            p["_relevancia"] = matches
+            relevantes.append(p)
+        else:
+            descartados.append(p)
+
+    relevantes.sort(key=lambda x: x.get("_relevancia", 0), reverse=True)
+    return relevantes, descartados
 
 
 # ── Bloque 1: Frescura de datos ───────────────────────────────────────────────
@@ -541,8 +592,19 @@ def ejecutar(mercado: str, engine=None) -> str:
     # Páginas de búsqueda
     productos = scraping_busqueda_amazon(mercado, paginas=3)
 
+    # Filtro de relevancia: Amazon devuelve resultados amplios. Sin esto, los agentes
+    # analizan productos que no corresponden a lo buscado (ej: 'termo para cerveza'
+    # trayendo botellas de agua) y las conclusiones salen desviadas.
+    if productos:
+        productos, descartados = filtrar_por_relevancia(productos, mercado)
+        if descartados:
+            print(f"  [scraper] {len(descartados)} productos descartados por no coincidir con '{mercado}'")
+        if 0 < len(productos) < 3:
+            print(f"  [scraper] ADVERTENCIA: solo {len(productos)} productos relevantes para '{mercado}'.")
+            print(f"  El análisis será limitado. Considera una búsqueda más específica o subir un CSV de Helium 10.")
+
     if not productos:
-        print("  [scraper] Sin productos — guardando solo keywords")
+        print(f"  [scraper] Sin productos relevantes para '{mercado}' — guardando solo keywords")
         guardar_como_csv([], keywords, mercado)
         return "scraping"
 
